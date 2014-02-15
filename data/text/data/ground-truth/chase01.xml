@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<annotation id="chase01" activity="chase" source="MTurk">
+    <object id="0" role="Subject">
+        <attribute type="Mental">aggressive, alert, angry, angry, determined, determined, determined, determined, dutiful, enthusiastic, excited, excited, excited, focused, joyful, pensive, protective, vigilant</attribute>
+        <attribute type="Detection">carrying, chaser-multi, chaser-multi, chaser-multi, person, person, policeman, policeman, policeman, raising, raising, raising, running, running, running</attribute>
+    </object>
+    <object id="1" role="Object">
+        <attribute type="Mental">apprehensive, desperate, desperate, excited, excited, fearful, fearful, fearful, fearful, frightened, frightened, heart-pounding, hopeless, panicked, scared, scared, scared, scared</attribute>
+        <attribute type="Detection">person, person, person, policeman, raising, raising, running, running, running</attribute>
+    </object>
+    <object id="2" role="Settings">
+        <attribute type="Mental" />
+        <attribute type="Detection">alley, arena, indoor, indoor, indoor, store</attribute>
+    </object>
+    <object id="3" role="Others">
+        <attribute type="Mental" />
+        <attribute type="Detection">bag, tv</attribute>
+    </object>
+</annotation>

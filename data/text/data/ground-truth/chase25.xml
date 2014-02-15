@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<annotation id="chase25" activity="chase" source="MTurk">
+    <object id="0" role="Subject">
+        <attribute type="Mental">aggressive, amused, energized, enthusiastic, enthusiastic, excited, excited, excited, excited, happy, happy, happy, happy, happy, happy, happy, happy, happy, hunting, joyful, playful, playful, playful, playful</attribute>
+        <attribute type="Detection">chaser-multi, chaser-multi, chaser-multi, child, fall, jogging, jogging, jumping, person, person, pick-up, pick-up, raising, raising, raising, running, running, running, waving, waving</attribute>
+    </object>
+    <object id="1" role="Object">
+        <attribute type="Mental">concerned, ecstatic, enjoyable, excited, excited, excited, exhilarating, fearful, giddy, happy, happy, happy, happy, happy, happy, happy, heart-pounding, joyous, playful, playful, playful, wary</attribute>
+        <attribute type="Detection">child, child, jogging, jumping, kicking, kicking, person, person, raising, raising, running, running, running, waving</attribute>
+    </object>
+    <object id="2" role="Settings">
+        <attribute type="Mental" />
+        <attribute type="Detection">beach, beach, beach, outdoor, outdoor, outdoor</attribute>
+    </object>
+    <object id="3" role="Others">
+        <attribute type="Mental" />
+        <attribute type="Detection">boat, chair, tree</attribute>
+    </object>
+</annotation>

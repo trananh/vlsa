@@ -20,5 +20,6 @@ project/plugins/project/
 # Properties / configs
 *.properties
 
-# Output folder
+# Output and data folder
 out/*
+data/*

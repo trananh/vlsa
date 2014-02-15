@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<annotation id="chase22" activity="chase" source="MTurk">
+    <object id="0" role="Subject">
+        <attribute type="Mental">angry, anxious, anxious, athletic, competitive, competitive, determined, determined, disappointed, energetic, enjoyable, excited, excited, heart-pounding, losing, playful, sad, sporty</attribute>
+        <attribute type="Detection">carrying, chaser-multi, chaser-multi, chaser-multi, child, child, lifting, object, person, pushing, pushing, raising, running, running, waving</attribute>
+    </object>
+    <object id="1" role="Object">
+        <attribute type="Mental">adrenalin, anxious, anxious, competitive, competitive, determined, determined, eager, enjoyable, excited, excited, happy, happy, happy, happy, happy, loyal, nervous, playful, proud, rushed</attribute>
+        <attribute type="Detection">carrying, chasee-multi, chasee-multi, child, child, lifting, object, object, person, person, pushing, running, running</attribute>
+    </object>
+    <object id="2" role="Settings">
+        <attribute type="Mental" />
+        <attribute type="Detection">arena, arena, arena, indoor, indoor</attribute>
+    </object>
+    <object id="3" role="Others">
+        <attribute type="Mental" />
+        <attribute type="Detection">chair</attribute>
+    </object>
+</annotation>

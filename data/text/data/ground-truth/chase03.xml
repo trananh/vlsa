@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<annotation id="chase03" activity="chase" source="MTurk">
+    <object id="0" role="Subject">
+        <attribute type="Mental">angry, angry, disrupted, enthusiastic, excited, excited, follower, frustrated, fun, happy, happy, happy, joyful, joyful, likable, mad, mad, playful, playful, sad, sad, sad, upset, worried</attribute>
+        <attribute type="Detection">carrying, child, child, child, jogging, person, person, raising, running, running, waving</attribute>
+    </object>
+    <object id="1" role="Object">
+        <attribute type="Mental">adrenalin, annoyed, determined, energetic, enjoyable, excited, excited, fun, happy, happy, happy, happy, happy, playful, playful, playful, playful, protective, scared, selfish, silly</attribute>
+        <attribute type="Detection">carrying, child, child, child, jogging, lifting, person, person, pushing, raising, raising, running, running</attribute>
+    </object>
+    <object id="2" role="Settings">
+        <attribute type="Mental" />
+        <attribute type="Detection">arena, indoor, indoor, indoor, office, office, suburb</attribute>
+    </object>
+    <object id="3" role="Others">
+        <attribute type="Mental" />
+        <attribute type="Detection">ball, ball, ball, chair, chair, chair, table, table, table</attribute>
+    </object>
+</annotation>

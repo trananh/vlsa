@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<annotation id="chase23" activity="chase" source="MTurk">
+    <object id="0" role="Subject">
+        <attribute type="Mental">adrenalin, aggressive, enthusiastic, enticed, excited, fun, happy, happy, happy, happy, happy, happy, happy, intrigued, joyful, joyful, laughable, playful, playful, playful, playful, playful, playful, playful</attribute>
+        <attribute type="Detection">child, child, child, person, person, raising, raising, raising, running, running, walking, waving, waving</attribute>
+    </object>
+    <object id="1" role="Object">
+        <attribute type="Mental">adrenalin, delighted, ecstatic, enjoyable, excited, excited, fun, happy, happy, happy, happy, happy, happy, happy, happy, joyful, laughable, leading, playful, playful, playful, playful, playful, playful, wary</attribute>
+        <attribute type="Detection">child, child, child, person, person, raising, raising, running, running, running, walking</attribute>
+    </object>
+    <object id="2" role="Settings">
+        <attribute type="Mental" />
+        <attribute type="Detection">beach, indoor, outdoor, outdoor, outdoor, park, park, playground, street, suburb, suburb</attribute>
+    </object>
+    <object id="3" role="Others">
+        <attribute type="Mental" />
+        <attribute type="Detection">bag, bus, car, car, car, tree, tree, tree, truck</attribute>
+    </object>
+</annotation>

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<annotation id="chase18" activity="chase" source="MTurk">
+    <object id="0" role="Subject">
+        <attribute type="Mental">aggressive, alert, angry, angry, angry, angry, angry, anxious, behind, concerned, concerned, determined, determined, elated, enjoyable, excited, excited, excited, excited, excited, frantic, heart-pounding, just, justified, nervous, pleased</attribute>
+        <attribute type="Detection">person, policeman, policeman, policeman, raising, running, running, running</attribute>
+    </object>
+    <object id="1" role="Object">
+        <attribute type="Mental">angry, avoidable, cautious, concerned, desperate, excited, excited, fast, fearful, fearful, fearful, frantic, frightened, frightened, guilty, happy, hopeless, nervous, panicked, panicked, scared, scared, scared, scared, scared, scared, scared, worried</attribute>
+        <attribute type="Detection">person, person, person, running, running, running</attribute>
+    </object>
+    <object id="2" role="Settings">
+        <attribute type="Mental" />
+        <attribute type="Detection">outdoor, street, street, street, suburb, suburb, suburb</attribute>
+    </object>
+    <object id="3" role="Others">
+        <attribute type="Mental" />
+        <attribute type="Detection">car, car, car, tree, tree, tree</attribute>
+    </object>
+</annotation>

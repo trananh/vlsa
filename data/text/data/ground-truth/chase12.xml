@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<annotation id="chase12" activity="chase" source="MTurk">
+    <object id="0" role="Subject">
+        <attribute type="Mental">adrenalin, angry, angry, angry, angry, angry, angry, angry, angry, angry, determined, enthusiastic, excited, excited, hostile, joyful, mad, protective, revengeful, upset, vengeful, vengeful, vengeful, vindictive</attribute>
+        <attribute type="Detection">carrying, carrying, chaser-multi, chaser-multi, fall, jogging, jogging, lifting, person, person, person, pick-up, raising, raising, running, running, running, walking, waving</attribute>
+    </object>
+    <object id="1" role="Object">
+        <attribute type="Mental">angry, cautious, dangerous, excited, excited, fearful, fearful, fearful, fearful, fearful, guilty, heart-pounding, panicked, panicked, scared, scared, scared, scared, suspicious, upset, upset, worried</attribute>
+        <attribute type="Detection">carrying, carrying, chasee-multi, chasee-multi, chasee-multi, fall, jogging, jogging, lifting, object, person, person, pick-up, raising, raising, running, running, running, waving</attribute>
+    </object>
+    <object id="2" role="Settings">
+        <attribute type="Mental" />
+        <attribute type="Detection">alley, alley, alley, outdoor, outdoor, parking-lot, parking-lot, parking-lot, store, street, street, suburb</attribute>
+    </object>
+    <object id="3" role="Others">
+        <attribute type="Mental" />
+        <attribute type="Detection">bat, bike, car, car, motor-bike, motor-bike, motor-bike</attribute>
+    </object>
+</annotation>
