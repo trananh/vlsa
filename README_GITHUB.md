@@ -1,11 +1,11 @@
-How to Use the sistanlp Code Repository with Github
-===================================================
+How to Use the vlsa Code Repository with Github
+===============================================
 
 1. Read a github tutorial. There are many good ones on the web. The trickiest thing with Git is understanding branches. This tutorial might be helpful: http://git-scm.com/book/en/Git-Branching-Branching-Workflows. This is a more detailed tutorial, if you really want to understand how things work (although the instructions below might be sufficient for most things): http://ftp.newartisans.com/pub/git.from.bottom.up.pdf. 
 
-2. To get a copy of sistanlp and start working with git, please follow these steps:
+2. To get a copy of vlsa and start working with git, please follow these steps:
 
-	`git clone git@github.com:sistanlp/sistanlp.git`
+	`git clone git@github.com:trananh/vlsa.git`
 
 3. By default you will be in the "master" branch. To see what local branches you have, and which one you are in, type (the branch marked with "*" is the branch you are in):
 
