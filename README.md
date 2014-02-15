@@ -1,6 +1,7 @@
-Video Latent Scene Attributes (VLSA) Detection System
-=====================================================
+Video Latent Scene Attributes (VLSA) System
+===========================================
 
+Main repository for VLSA code
 
 To compile from the command line
 ================================

@@ -55,7 +55,7 @@ Useful Tips
 
 <blockquote>
 [user]<br>
-	&nbsp;&nbsp;email = msurdeanu@email.arizona.edu<br>
+	&nbsp;&nbsp;email = youremail@email.com<br>
 [alias]<br>
 	&nbsp;&nbsp;st = status<br>
 	&nbsp;&nbsp;ci = commit<br>
