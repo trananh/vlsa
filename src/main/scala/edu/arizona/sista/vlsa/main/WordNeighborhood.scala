@@ -645,7 +645,7 @@ object RunWordNeighborhood {
 
     // Initialize some file locations needed for the models and evaluation
     val statesDictionary = "/Volumes/MyPassport/data/text/dictionaries/mental-states/states-adjectives.txt"
-    val annotationDir = "/Volumes/MyPassport/data/text/data/ground-truth/"
+    val annotationDir = "/Volumes/MyPassport/data/annotations/chase/xml/"
     val cacheDirectory = "/Volumes/MyPassport/data/vlsa/neighborhood/distributions"
 
     // Generate annotation set

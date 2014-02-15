@@ -366,7 +366,7 @@ object NeighborhoodExperiment {
      */
 
     // Ground-truth directory and mental state dictionary
-    val groundTruthDir = "/Volumes/MyPassport/data/text/data/ground-truth-pilot/"
+    val groundTruthDir = "/Volumes/MyPassport/data/annotations/chase-pilot/xml"
     val statesDictionary = "/Volumes/MyPassport/data/text/dictionaries/mental-states/states-adjectives.txt"
     val vecFile = "/Volumes/MyPassport/data/text/entity-vectors/Gigaword-story/story-vecs.bin"
 
