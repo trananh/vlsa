@@ -33,8 +33,6 @@ class DeletedInterpolation(statesDictionaryFile: String, indexDir: String, frequ
   /** Maintain a document neighborhood model for getting search highlights. */
   var docModel = DocNeighborhood.createModel(statesDictionaryFile, indexDir)
   docModel.dictionary.getAllTokens().map(_(0)).foreach(s => mentalStates.add(s))
-  docModel.dictionary.clear()           // clear internal structures of
-  docModel.keywordsMap.clear()          // doc model to save HEAP memory
 
   /** Load precomputed frequency for the search from file.
     * @param searchTerms The search context to load frequency for.
@@ -67,13 +65,18 @@ class DeletedInterpolation(statesDictionaryFile: String, indexDir: String, frequ
     for (start <- 0 to 1) {
       for (idx <- start until query.size) {
         val searchTerms = query.slice(start, idx + 1)
-
         val file = new File(frequencyDir + "/" + searchTerms.map(_._1.toLowerCase.trim).sorted.mkString("-") + ".txt")
         if (!file.exists()) {
-          val frequency = docModel.countTermsWithPOS(searchTerms, cacheHighlightsDir)
-          saveFrequency(searchTerms, frequency)
+          if (searchTerms.size == 1) {
+            // Count all occurrences of this term
+            val frequency = docModel.countTermPOS(searchTerms.head, cacheHighlightsDir)
+            saveFrequency(searchTerms, frequency)
+          } else {
+            // Count the number of sentences containing all the terms
+            val frequency = docModel.countSentencesWithTermsPOS(searchTerms, cacheHighlightsDir)
+            saveFrequency(searchTerms, frequency)
+          }
         }
-
       }
     }
   }
@@ -96,7 +99,7 @@ class DeletedInterpolation(statesDictionaryFile: String, indexDir: String, frequ
 
     // For each query compose a new query by including a mental state.
     queries.foreach(query => {
-      mentalStates.foreach(state => {
+      mentalStates.toArray.sorted.foreach(state => {
         val newQuery = (state, Option(statesPOS)) :: query
         assert(newQuery.size == numParams)
 
@@ -189,11 +192,11 @@ object TrainDeletedInterpolation {
     // Initialize some file locations needed for the model
     val mentalStatesFile = "/Volumes/MyPassport/data/text/dictionaries/mental-states/states-adjectives.txt"
     val index = "/Volumes/MyPassport/data/text/indexes/Gigaword-stemmed"
-    val highlightsCacheDir = "/Volumes/MyPassport/data/vlsa/neighborhood/gigaword"
-    val frequencyDir = "/Volumes/MyPassport/data/vlsa/neighborhood/frequency"
+    val highlightsCacheDir = "/Volumes/MyPassport/data/vlsa/neighborhood/chase/highlights/doc"
+    val frequencyDir = "/Volumes/MyPassport/data/vlsa/neighborhood/chase/frequency/doc"
 
     // Location of annotations
-    val annotationDir = "/Volumes/MyPassport/data/text/data/ground-truth-pilot"
+    val annotationDir = "/Volumes/MyPassport/data/annotations/chase-pilot/xml/"
     val annotationSet = (1 to 4).map(annotationDir + "/chase" + "%02d".format(_) + ".xml")
 
     // Load annotation to create queries
@@ -233,18 +236,17 @@ object RunDeletedInterpolation {
     // Initialize some file locations needed for the model and evaluation
     val mentalStatesFile = "/Volumes/MyPassport/data/text/dictionaries/mental-states/states-adjectives.txt"
     val index = "/Volumes/MyPassport/data/text/indexes/Gigaword-stemmed"
-    val highlightsCacheDir = "/Volumes/MyPassport/data/vlsa/neighborhood/gigaword"
-    val frequencyDir = "/Volumes/MyPassport/data/vlsa/neighborhood/frequency"
+    val highlightsCacheDir = "/Volumes/MyPassport/data/vlsa/neighborhood/chase/highlights/doc"
+    val frequencyDir = "/Volumes/MyPassport/data/vlsa/neighborhood/chase/frequency/doc"
 
     // Location of annotations
-    val annotationDir = "/Volumes/MyPassport/data/text/data/ground-truth-pilot"
+    val annotationDir = "/Volumes/MyPassport/data/annotations/chase-pilot/xml/"
     val annotationSet = (1 to 4).map(annotationDir + "/chase" + "%02d".format(_) + ".xml")
 
     /* Lambda parameters for search tuples (trained on the 4 pilot chase videos).
-     *   AAL: Array(0.0, 0.375, 0.25, 0.375)
-     *    AA: Array(0.0034129692832764505, 0.40273037542662116, 0.5938566552901023)
+     *    AA: Array(0.0029411764705882353, 0.36764705882352944, 0.6294117647058823)
      */
-    val lambdas = Array(0.0034129692832764505, 0.40273037542662116, 0.5938566552901023)
+    val lambdas = Array(0.0029411764705882353, 0.36764705882352944, 0.6294117647058823)
 
     // Create a model
     val model = new DeletedInterpolation(mentalStatesFile, index, frequencyDir, highlightsCacheDir)

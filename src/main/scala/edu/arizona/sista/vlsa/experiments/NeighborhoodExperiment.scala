@@ -366,7 +366,7 @@ object NeighborhoodExperiment {
      */
 
     // Ground-truth directory and mental state dictionary
-    val groundTruthDir = "/Volumes/MyPassport/data/annotations/chase-pilot/xml"
+    val groundTruthDir = "/Volumes/MyPassport/data/annotations/chase-pilot/xml/"
     val statesDictionary = "/Volumes/MyPassport/data/text/dictionaries/mental-states/states-adjectives.txt"
     val vecFile = "/Volumes/MyPassport/data/text/entity-vectors/Gigaword-story/story-vecs.bin"
 
@@ -376,7 +376,7 @@ object NeighborhoodExperiment {
     val searchContext = List(("chase", Option(NLPUtils.POS_VBs)))
 
     // Run document neighborhood experiment
-    val docDataDir = "/Volumes/MyPassport/data/vlsa/neighborhood/gigaword"
+    val docDataDir = "/Volumes/MyPassport/data/vlsa/neighborhood/chase/highlights/doc"
     val index = "/Volumes/MyPassport/data/text/indexes/Gigaword-stemmed"
     val docModel = runDocNeighborhood(statesDictionary, index, searchContext, dataDir = Option(docDataDir))
     println("\nEVALUATING DOC NEIGHBORHOOD\n")
@@ -387,7 +387,7 @@ object NeighborhoodExperiment {
     docModel.clear()
 
     // Run web neighborhood experiment
-    val webDataDir = "/Volumes/MyPassport/data/vlsa/neighborhood/bing"
+    val webDataDir = "/Volumes/MyPassport/data/vlsa/neighborhood/chase/bing"
     val webModel = runWebNeighborhood(statesDictionary, webDataDir, searchContext)
     println("\nEVALUATING WEB NEIGHBORHOOD\n")
     evalSet.foreach(file => {

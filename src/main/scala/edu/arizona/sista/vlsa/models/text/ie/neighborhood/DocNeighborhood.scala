@@ -16,6 +16,7 @@ import org.apache.lucene.analysis.en.EnglishAnalyzer
 import org.apache.lucene.util.Version
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
+import scala.util.control.Breaks._
 
 /** A simple word-search model to find the occurrence frequency of keywords within
   * some neighborhood window of the search results.  This model operates specifically
@@ -310,18 +311,49 @@ class DocNeighborhood(val searcher: IndexSearcher) {
     }).toMap
 
     // Process highlights
+    processSearchTermsWithPOS(highlights, searchLemmas, targetPOSLabels)
+
+  }
+
+  /** Scan the neighborhood of text generated from searching for the specified terms and
+    * keep count of keywords from the dictionary.  The term and the keyword must appear
+    * in the correct part-of-speech for the keyword to be counted.
+    *
+    * - run (tokenize + lemmatize + POS) on found passages
+    * - filter for passages where the search terms match specific POS labels
+    * - for each passage, filter for tokens matching specific POS labels
+    * - update count for keyword tokens found
+    *
+    * @param highlights Highlights iterator.
+    * @param searchLemmas Map of search terms (in lemma forms) and their associated POS restrictions
+    *                     (set to None for no restrictions).
+    * @param targetPOSLabels Set of POS labels used to filter the tokens
+    *                        (default to adjective labels).
+    */
+  def processSearchTermsWithPOS(highlights: Iterator[String],
+                                searchLemmas: scala.collection.Map[String, Option[Set[String]]],
+                                targetPOSLabels: Set[String]) {
+    // Bookkeeping variables
     var doc: Document = null
     val targets = new ListBuffer[String]()
     val searchFlags = mutable.Map(searchLemmas.map(e => (e._1, false)).toSeq: _*)
     val ellipsis = searcher.params.getOrElse("ellipsis", IndexSearcher.DEFAULT_HIGHLIGHT_ELLIPSIS).asInstanceOf[String]
+
+    // Process highlights
     highlights.foreach(h => h.split(Pattern.quote(ellipsis)).foreach(passage => {
+
       // Iterate through each highlight and annotate
       doc = processor.mkDocumentFromSentences(NLPUtils.dropLongSentences(passage))
       NLPUtils.annotateCoreNLP(doc, POS = true, lemmatize = true)
+
       // Filter for search terms appearing in the correct POS for _each_ sentence in the highlight.
       doc.sentences.foreach(s => {
+
+        // Reset bookkeeping
         targets.clear()
         searchFlags.keys.foreach(k => searchFlags.put(k, false))
+
+        // Here's where we iterate over each token and search
         for (i <- 0 until s.lemmas.get.length) {
           if (s.tags.isDefined) {
             if (targetPOSLabels.contains(s.tags.get(i)))
@@ -333,23 +365,86 @@ class DocNeighborhood(val searcher: IndexSearcher) {
             }
           }
         }
+
         if (searchFlags.values.reduceLeft(_ && _)) {
           // If all search terms are found in the correct POS, then update the frequency counts
           // for all keywords found in the highlight.
-          dictionary.increment(targets, Option(s.words.mkString(" ")))
+          dictionary.increment(targets, None)
+        }
+
+      })
+    })) // end highlights loop
+
+  }
+
+  /** Scan the neighborhood of text generated from searching for the specified term and
+    * keep count of the number of times that term appear in the correct POS.
+    *
+    * This method requires caching to files.
+    *
+    * - run (tokenize + lemmatize + POS) on found passages
+    * - filter for passages where the search terms match specific POS labels
+    * - update frequency count for each valid match
+    *
+    * @param searchTerm The search term and its associated POS restrictions (set to None for no restrictions).
+    * @param cacheDir Path to directory containing the cached highlights from a previous search.
+    *
+    * @return A count of the number of valid results.
+    */
+  def countTermPOS(searchTerm: (String, Option[Set[String]]), cacheDir: String): Long = {
+    // Create cache file name
+    val cacheFilename = searchTerm._1.toLowerCase.trim + ".txt"
+    val cacheHighlightsFile = cacheDir + "/" + cacheFilename
+
+    // Retrieve search highlights
+    val queryStr = searchTerm._1
+    val highlights = getHighlightsStream(queryStr, IndexSearcher.DEFAULT_MAX_HIGHLIGHTS_PAGE, cacheHighlightsFile)
+
+    // Lemmatize the search terms
+    var searchLemma = ""
+    if (dictionary.freq(0).contains(List(searchTerm._1)))
+      searchLemma = searchTerm._1
+    else if (keywordsMap.contains(searchTerm._1))
+      searchLemma = keywordsMap.get(searchTerm._1).get
+    else
+      searchLemma = NLPUtils.annotateString(searchTerm._1.trim, POS = true, lemmatize = true).sentences(0).lemmas.get(0)
+
+    // The frequency count
+    var frequency = 0L
+
+    // Process highlights
+    var doc: Document = null
+    val ellipsis = searcher.params.getOrElse(
+      "ellipsis", IndexSearcher.DEFAULT_HIGHLIGHT_ELLIPSIS).asInstanceOf[String]
+    highlights.foreach(h => h.split(Pattern.quote(ellipsis)).foreach(passage => {
+      // Iterate through each highlight and annotate
+      doc = processor.mkDocumentFromSentences(NLPUtils.dropLongSentences(passage))
+      NLPUtils.annotateCoreNLP(doc, POS = true, lemmatize = true)
+      // Filter for search term appearing in the correct POS.
+      doc.sentences.foreach(s => {
+        for (i <- 0 until s.lemmas.get.length) {
+          if (s.tags.isDefined) {
+            if (searchLemma.equalsIgnoreCase(s.lemmas.get(i))) {
+              if (!searchTerm._2.isDefined || searchTerm._2.get.contains(s.tags.get(i)))
+                frequency += 1
+            }
+          }
         }
       })
     }))
 
+    frequency
   }
 
   /** Scan the neighborhood of text generated from searching for the specified terms and
-    * keep count of the number of valid results in which the terms appear
-    * in the correct part-of-speech.
+    * keep count of the number of valid _sentences_ in which the terms appear in the correct
+    * part-of-speech. Note for each sentence result, we add _at most_ one to the count
+    * if all terms appear in the sentence (even if they may appear multiple times).
+    *
+    * Each token is incremented at most once per sentence!
     *
     * This method requires caching to files.
     *
-    * - retrieve search results
     * - run (tokenize + lemmatize + POS) on found passages
     * - filter for passages where the search terms match specific POS labels
     * - update frequency count for each valid match
@@ -358,9 +453,9 @@ class DocNeighborhood(val searcher: IndexSearcher) {
     *                    (set to None for no restrictions).
     * @param cacheDir Path to directory containing the cached highlights from a previous search.
     *
-    * @return A count of the number of valid results.
+    * @return A count of the number of sentences with valid results.
     */
-  def countTermsWithPOS(searchTerms: List[(String, Option[Set[String]])], cacheDir: String): Long = {
+  def countSentencesWithTermsPOS(searchTerms: List[(String, Option[Set[String]])], cacheDir: String): Long = {
     // Create cache file name
     val cacheFilename = searchTerms.map(_._1.toLowerCase.trim).sorted.mkString("-") + ".txt"
     val cacheHighlightsFile = cacheDir + "/" + cacheFilename
@@ -371,7 +466,12 @@ class DocNeighborhood(val searcher: IndexSearcher) {
 
     // Lemmatize the search terms
     val searchLemmas = searchTerms.map(e => {
-      (NLPUtils.annotateString(e._1.trim, POS = true, lemmatize = true).sentences(0).lemmas.get(0), e._2)
+      if (dictionary.freq(0).contains(List(e._1)))
+        (e._1, e._2)
+      else if (keywordsMap.contains(e._1))
+        (keywordsMap.get(e._1).get, e._2)
+      else
+        (NLPUtils.annotateString(e._1.trim, POS = true, lemmatize = true).sentences(0).lemmas.get(0), e._2)
     }).toMap
 
     // The frequency count
@@ -399,13 +499,109 @@ class DocNeighborhood(val searcher: IndexSearcher) {
           }
         }
         if (searchFlags.values.reduceLeft(_ && _)) {
-          // If all search terms are found in the correct POS, then update the frequency count by 1.
+          // If all search terms are found in the correct POS, then update the frequency count by 1 for each
+          // sentence (in effect, we are counting the number of sentences).
           frequency += 1
         }
       })
     }))
 
     frequency
+  }
+
+  /** Compute the joint frequency counts for each activity-actor pair in combination with each
+    * of the mental state.  The frequency counts the number of sentences in which all the
+    * required search terms appear.
+    *
+    * @param cacheFile The cached highlights file for the activity (and just the activity).
+    * @param activity The activity.
+    * @param actors The set of possible actors.
+    * @param frequencyDir The frequency output directory for storing frequency counts.
+    * @param targetPOSLabels The target labels of the mental states.
+    * @param overwrite Overwrite all previously cached frequencies if True.
+    */
+  def computeStatesFrequencyAA(cacheFile: File, activity: (String, Option[Set[String]]),
+                               actors: List[(String, Option[Set[String]])], frequencyDir: String,
+                               targetPOSLabels: Set[String] = NLPUtils.POS_JJs.union(NLPUtils.POS_VBs),
+                               overwrite: Boolean = false) {
+
+    /** Helper function to write the frequency to file */
+    def saveFrequency(searchTerms: List[String], freq: Long) {
+      val file = new File(frequencyDir + "/" + searchTerms.map(_.toLowerCase.trim).sorted.mkString("-") + ".txt")
+      val writer = new java.io.FileWriter(file)
+      writer.write(freq + "\n")
+      writer.close()
+    }
+
+    // Retrieve search highlights
+    assert(cacheFile.exists())
+    val highlights = scala.io.Source.fromFile(cacheFile).getLines().toArray
+
+    // Lemmatize the search terms
+    val activityLemma =
+      (NLPUtils.annotateString(activity._1, POS = true, lemmatize = true).sentences(0).lemmas.get(0), activity._2)
+    val actorLemmas = actors.map(e => {
+      (NLPUtils.annotateString(e._1.trim, POS = true, lemmatize = true).sentences(0).lemmas.get(0), e._2)
+    })
+
+    // List of mental states
+    val mentalStates = dictionary.getAllTokens().toList.map(_(0))
+
+    // Iterate over each possible actor
+    var searchTerms: List[String] = null
+    var searchLemmas: scala.collection.Map[String, Option[Set[String]]] = null
+    for (i <- -1 until actors.length) {
+      // For each actor combination, let's reset the dictionary.
+      dictionary.reset()
+
+      // Create a map of search terms
+      if (i == -1) {
+        searchTerms = List(activity._1)
+        searchLemmas = List(activityLemma).toMap
+      } else {
+        searchTerms = List(activity._1) ::: List(actors(i)._1)
+        searchLemmas = (List(activityLemma) ::: List(actorLemmas(i))).toMap
+      }
+
+      // Skip this entire process if we already have the frequency counts for this particular search
+      var shouldRun = false
+      if (overwrite)
+        shouldRun = true
+      else {
+        breakable {
+          mentalStates.foreach(state => {
+            val terms = searchTerms ::: List(state)
+            val file = new File(frequencyDir + "/" + terms.map(_.toLowerCase.trim).sorted.mkString("-") + ".txt")
+            if (!file.exists()) {
+              shouldRun = true
+              break()
+            }
+          })
+        }
+      }
+
+      // Only run the frequency counting process (which is very expensive) if we must
+      if (shouldRun) {
+
+        // Process highlights
+        processSearchTermsWithPOS(highlights.toIterator, searchLemmas, targetPOSLabels)
+
+        // Now dump out the dictionary frequency and save them.
+        val freqResults = dictionary.freq(0).map(entry => (entry._1(0), entry._2.toLong))
+        if (Constants.DEBUG) println("Search terms: " + searchTerms.mkString(" "))
+        if (Constants.DEBUG) println(freqResults.mkString(" "))
+        freqResults.foreach(state => {
+          val terms = searchTerms ::: List(state._1)
+          val file = new File(frequencyDir + "/" + terms.map(_.toLowerCase.trim).sorted.mkString("-") + ".txt")
+          if (overwrite || !file.exists()) {
+            saveFrequency(terms, state._2)
+          }
+        })
+
+      } // end if for running a frequency-counting process for a particular search-context
+
+    } // end for loop over each actor
+
   }
 
   /** Return the current results as a list of (word, score) pairs, ranked by the scores.
@@ -518,6 +714,52 @@ object DocNeighborhood {
 }
 
 
+/** Compute deleted interpolation joint frequency counts. */
+object RunComputeJointFrequency {
+
+  def main(args: Array[String]) {
+
+    /* NOTE: All hard-coded file/directory locations below should be changed appropriately before running.
+     * There are simply too many of which to expose them as command-line arguments for now.
+     * We may consider doing something smarter in the future (e.g., using properties file).
+     */
+
+    // Initialize some file locations needed for the model
+    val index = "/Volumes/MyPassport/data/text/indexes/Gigaword-stemmed"
+    val mentalStatesFile = "/Volumes/MyPassport/data/text/dictionaries/mental-states/states-adjectives.txt"
+    val frequencyDir = "/Volumes/MyPassport/data/vlsa/neighborhood/chase/frequency/doc"
+    val cachedFile = new File("/Volumes/MyPassport/data/vlsa/neighborhood/chase/highlights/doc/chase.txt")
+    val targetPOSLabels = NLPUtils.POS_JJs.union(NLPUtils.POS_VBs)
+
+    // Location of annotations
+    val annotationDir = "/Volumes/MyPassport/data/annotations/chase/xml/"
+    val annotationSet = (1 to 26).map(annotationDir + "chase" + "%02d".format(_) + ".xml")
+
+    // Load annotation to create queries
+    val queries = new ListBuffer[(String, String)]()
+    annotationSet.foreach(annotationFile => {
+      // Create a Word Neighborhood Model to generate queries
+      val wnm = new WordNeighborhood("")
+      wnm.loadDetections(annotationFile)
+      queries.appendAll(wnm.formulateQueriesAA())
+    })
+    val queriesWithPOS = queries.map(q => {
+      List((q._1, Option(NLPUtils.POS_VBs)), (q._2, Option(NLPUtils.POS_NNs)))
+    }).toArray
+
+    // Separate out the queries into activity and a set of actors
+    val activity = queriesWithPOS.head(0)
+    val actors = queriesWithPOS.map(q => q(1)).toSet.toList
+
+    // Compute frequency
+    val model = DocNeighborhood.createModel(mentalStatesFile, index)
+    model.computeStatesFrequencyAA(cachedFile, activity, actors, frequencyDir, targetPOSLabels, overwrite = false)
+
+  }
+
+}
+
+
 /** Perform an index search on the specified search context save the highlights
   * to file for offline use.
   */
@@ -548,11 +790,11 @@ object RunSearchHighlightsToFile {
     * saving all results to file.
     */
   def main(args: Array[String]) {
-    val outDir = "/Volumes/MyPassport/data/vlsa/neighborhood/gigaword"
+    val outDir = "/Volumes/MyPassport/data/vlsa/neighborhood/chase/highlights/doc"
     val index = "/Volumes/MyPassport/data/text/indexes/Gigaword-stemmed"
-    val annotationDir = "/Volumes/MyPassport/data/text/data/ground-truth-pilot"
+    val annotationDir = "/Volumes/MyPassport/data/annotations/chase-pilot/xml/"
 
-    val annotationSet = (1 to 4).map(annotationDir + "/chase" + "%02d".format(_) + ".xml")
+    val annotationSet = (1 to 4).map(annotationDir + "chase" + "%02d".format(_) + ".xml")
     annotationSet.foreach(annotationFile => {
 
       // Create a Word Neighborhood Model to generate queries

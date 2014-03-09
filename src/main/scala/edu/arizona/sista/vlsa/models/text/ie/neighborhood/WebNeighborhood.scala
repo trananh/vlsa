@@ -310,7 +310,7 @@ object WebNeighborhood {
   */
 object RunWebSearchToFile {
   def main(args: Array[String]) {
-    val outDir = "/Volumes/MyPassport/data/vlsa/neighborhood/bing"
+    val outDir = "/Volumes/MyPassport/data/vlsa/neighborhood/chase/bing"
     val model = new WebNeighborhood(new BingSearcher())
     val adjectives = Array("angry", "desperate", "determined", "excited",
       "frustrating", "happy", "sad", "threatening", "violent",

@@ -19,7 +19,7 @@ import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
 /** An information extraction model that makes use of several underlying models, such as the
-  * doccuments-based back-off model, vector-based back-off model, and documents-based deleted
+  * documents-based back-off model, vector-based back-off model, and documents-based deleted
   * interpolation model in order to extract distributions of mental states from text to describe video
   * scenes.
   *
@@ -548,7 +548,7 @@ class WordNeighborhood(val statesDictionary: String,
     var docPruned: List[(String, Double)] = List[(String, Double)]()
     if (docPrunePct.isDefined) {
       println("\nDOC NEIGHBORHOOD (Prune = " + docPrunePct.get + ")\n")
-      val docDataDir = "/Volumes/MyPassport/data/vlsa/neighborhood/gigaword"
+      val docDataDir = "/Volumes/MyPassport/data/vlsa/neighborhood/chase/highlights/doc"
       val index = "/Volumes/MyPassport/data/text/indexes/Gigaword-stemmed"
       //val lambdas = Array(0.2, 0.5)
       val lambdas = Array(0.25)
@@ -573,11 +573,10 @@ class WordNeighborhood(val statesDictionary: String,
     var delDocPruned: List[(String, Double)] = List[(String, Double)]()
     if (delDocPrunePct.isDefined) {
       println("\nDEL NEIGHBORHOOD (Prune = " + delDocPrunePct.get + ")\n")
-      //val lambdas = Array(0.0, 0.375, 0.25, 0.375)
-      val lambdas = Array(0.0034129692832764505, 0.40273037542662116, 0.5938566552901023)
-      val frequencyDataDir = "/Volumes/MyPassport/data/vlsa/neighborhood/frequency"
-      val highlightsDataDir = "/Volumes/MyPassport/data/vlsa/neighborhood/gigaword"
+      val lambdas = Array(0.0029411764705882353, 0.36764705882352944, 0.6294117647058823)
       val delDocIndex = "/Volumes/MyPassport/data/text/indexes/Gigaword-stemmed"
+      val frequencyDataDir = "/Volumes/MyPassport/data/vlsa/neighborhood/chase/frequency/doc"
+      val highlightsDataDir = "/Volumes/MyPassport/data/vlsa/neighborhood/chase/highlights/doc"
       initDelDocNeighborhood(delDocIndex, frequencyDataDir, highlightsDataDir)
       val delDocResults = deletedInterpolation(queriesWithPOS, lambdas)
       clearDelDocNeighborhood()
@@ -645,10 +644,10 @@ object RunWordNeighborhood {
 
     // Initialize some file locations needed for the models and evaluation
     val statesDictionary = "/Volumes/MyPassport/data/text/dictionaries/mental-states/states-adjectives.txt"
-    val annotationDir = "/Volumes/MyPassport/data/annotations/chase/xml/"
-    val cacheDirectory = "/Volumes/MyPassport/data/vlsa/neighborhood/distributions"
+    val cacheDirectory = "/Volumes/MyPassport/data/vlsa/neighborhood/chase/distributions"
 
     // Generate annotation set
+    val annotationDir = "/Volumes/MyPassport/data/annotations/chase/xml/"
     val annotationSet = (1 to 26).map(annotationDir + "chase" + "%02d".format(_) + ".xml")
 
     // Run baseline model or not
@@ -718,6 +717,91 @@ object RunWordNeighborhood {
     if (CWSAF1s.size > 0) {
       println("\n======\nCWSA F1\n======\n")
       printF1s(CWSAF1s.toList)
+    }
+
+  }
+}
+
+/** Estimate the best prune parameter for an individual model. */
+object RunExhaustPrunePercentage {
+
+  def main(args: Array[String]) {
+    /* NOTE: All hard-coded file/directory locations below should be changed appropriately before running.
+     * There are simply too many of which to expose them as command-line arguments for now.
+     * We may consider doing something smarter in the future (e.g., using properties file).
+     */
+
+    val activity = "chase"
+
+    // Initialize some file locations needed for the models and evaluation
+    val statesDictionary = "/Volumes/MyPassport/data/text/dictionaries/mental-states/states-adjectives.txt"
+    val annotationDir = "/Volumes/MyPassport/data/annotations/chase/xml/"
+    val cacheDirectory = "/Volumes/MyPassport/data/vlsa/neighborhood/chase/distributions"
+
+    // Generate annotation set
+    val annotationSet = (1 to 26).map(annotationDir + "chase" + "%02d".format(_) + ".xml")
+
+    // Keep list of scores (for each prune level)
+    val F1s = new ListBuffer[(Double, Double, Double)]()
+    val CWSAF1s = new ListBuffer[(Double, Double, Double)]()
+
+    // Find the average
+    def aveF1s(f1s: ListBuffer[(Double, Double, Double)]): (Double, Double, Double)  = {
+      val f = f1s.map(_._1)
+      val p = f1s.map(_._2)
+      val r = f1s.map(_._3)
+      (f.sum / f.size, p.sum / p.size, r.sum / r.size)
+    }
+
+    // Iterate over each prune level
+    for (pct <- (0.0 to 1.0 by 0.05)) {
+
+      println("\n====\nPrune pct: " + pct)
+
+      val f1s = new ListBuffer[(Double, Double, Double)]()
+      val cwsaf1s = new ListBuffer[(Double, Double, Double)]()
+
+      // Iterate over each evaluation file
+      annotationSet.foreach(annotationFile => {
+        // Create a Word Neighborhood Model
+        val wnm = new WordNeighborhood(statesDictionary, distCacheDirectory = Option(cacheDirectory))
+        wnm.loadDetections(annotationFile)
+
+        // Evaluation object
+        val eval = new Evaluation(annotationFile)
+        eval.log = false
+
+        /** Run model */
+        val distribution = wnm.process(eval, debugMode = false,
+          vecPrunePct = None /* .10 */, docPrunePct = None /* .70 */, delDocPrunePct = None /* .85 */)
+
+        f1s.append(eval.F1(distribution.map(_._1).toSet))
+        cwsaf1s.append(eval.CWSAF1(distribution))
+      })
+
+      F1s.append(aveF1s(f1s))
+      println("\n====\nF1: " + F1s.last.toString())
+      CWSAF1s.append(aveF1s(cwsaf1s))
+      println("\n====\nCWSA-F1: " + CWSAF1s.last.toString())
+    }
+
+    // Print scores
+    def printF1s(f1s: ListBuffer[(Double, Double, Double)]) = {
+      val f = f1s.map(_._1)
+      val p = f1s.map(_._2)
+      val r = f1s.map(_._3)
+      println("\nPrecisions\n" + p.mkString("\n"))
+      println("\nRecalls\n" + r.mkString("\n"))
+      println("\nF1s\n" + f.mkString("\n"))
+    }
+
+    if (F1s.size > 0) {
+      println("\n======\nSet F1\n======\n")
+      printF1s(F1s)
+    }
+    if (CWSAF1s.size > 0) {
+      println("\n======\nCWSA F1\n======\n")
+      printF1s(CWSAF1s)
     }
 
   }
