@@ -179,7 +179,15 @@ class DeletedInterpolation(statesDictionaryFile: String, indexDir: String, frequ
 }
 
 /** Run the deleted interpolation algorithm using frequency counts from the documents-based
-  * neighborhood model to estimate the interpolation (lambda) parameters
+  * neighborhood model to estimate the interpolation (lambda) parameters.
+  *
+  * NOTE: This method depends on previously cached frequency counts to run efficiently.
+  * It is capable of computing the frequency as needed, but this process is much slower.
+  *
+  * It is STRONGLY recommended to batch pre-compute the counts by running:
+  *   - [[edu.arizona.sista.vlsa.models.text.ie.neighborhood.RunComputeTermPOS]]
+  *   - [[edu.arizona.sista.vlsa.models.text.ie.neighborhood.RunComputeJointFrequency]]
+  *
   */
 object TrainDeletedInterpolation {
 
@@ -190,20 +198,21 @@ object TrainDeletedInterpolation {
      */
 
     // Initialize some file locations needed for the model
+    val act = "hug"
     val mentalStatesFile = "/Volumes/MyPassport/data/text/dictionaries/mental-states/states-adjectives.txt"
     val index = "/Volumes/MyPassport/data/text/indexes/Gigaword-stemmed"
-    val highlightsCacheDir = "/Volumes/MyPassport/data/vlsa/neighborhood/chase/highlights/doc"
-    val frequencyDir = "/Volumes/MyPassport/data/vlsa/neighborhood/chase/frequency/doc"
+    val highlightsCacheDir = "/Volumes/MyPassport/data/vlsa/neighborhood/" + act + "/highlights/doc"
+    val frequencyDir = "/Volumes/MyPassport/data/vlsa/neighborhood/" + act + "/frequency/doc"
 
     // Location of annotations
-    val annotationDir = "/Volumes/MyPassport/data/annotations/chase-pilot/xml/"
-    val annotationSet = (1 to 4).map(annotationDir + "/chase" + "%02d".format(_) + ".xml")
+    val annotationDir = "/Volumes/MyPassport/data/annotations/" + act + "-pilot/xml/"
+    val annotationSet = (1 to 5).map(annotationDir + act + "%02d".format(_) + ".xml")
 
     // Load annotation to create queries
     val queries = new ListBuffer[(String, String)]()
     annotationSet.foreach(annotationFile => {
       // Create a Word Neighborhood Model to generate queries
-      val wnm = new WordNeighborhood("")
+      val wnm = new WordNeighborhood(act, "")
       wnm.loadDetections(annotationFile)
       queries.appendAll(wnm.formulateQueriesAA())
     })
@@ -224,7 +233,15 @@ object TrainDeletedInterpolation {
 
 }
 
-/** Run the documents-based neighborhood model with deleted interpolation. */
+/** Run the documents-based neighborhood model with deleted interpolation.
+  *
+  * NOTE: This method depends on previously cached frequency counts to run efficiently.
+  * It is capable of computing the frequency as needed, but this process is much slower.
+  *
+  * It is STRONGLY recommended to batch pre-compute the counts by running:
+  *   - [[edu.arizona.sista.vlsa.models.text.ie.neighborhood.RunComputeTermPOS]]
+  *   - [[edu.arizona.sista.vlsa.models.text.ie.neighborhood.RunComputeJointFrequency]]
+  */
 object RunDeletedInterpolation {
 
   def main(args: Array[String]) {
@@ -234,19 +251,18 @@ object RunDeletedInterpolation {
      */
 
     // Initialize some file locations needed for the model and evaluation
+    val act = "chase"
     val mentalStatesFile = "/Volumes/MyPassport/data/text/dictionaries/mental-states/states-adjectives.txt"
     val index = "/Volumes/MyPassport/data/text/indexes/Gigaword-stemmed"
-    val highlightsCacheDir = "/Volumes/MyPassport/data/vlsa/neighborhood/chase/highlights/doc"
-    val frequencyDir = "/Volumes/MyPassport/data/vlsa/neighborhood/chase/frequency/doc"
+    val highlightsCacheDir = "/Volumes/MyPassport/data/vlsa/neighborhood/" + act + "/highlights/doc"
+    val frequencyDir = "/Volumes/MyPassport/data/vlsa/neighborhood/" + act + "/frequency/doc"
 
     // Location of annotations
-    val annotationDir = "/Volumes/MyPassport/data/annotations/chase-pilot/xml/"
-    val annotationSet = (1 to 4).map(annotationDir + "/chase" + "%02d".format(_) + ".xml")
+    val annotationDir = "/Volumes/MyPassport/data/annotations/" + act + "-pilot/xml/"
+    val annotationSet = (1 to 4).map(annotationDir + act + "%02d".format(_) + ".xml")
 
-    /* Lambda parameters for search tuples (trained on the 4 pilot chase videos).
-     *    AA: Array(0.0029411764705882353, 0.36764705882352944, 0.6294117647058823)
-     */
-    val lambdas = Array(0.0029411764705882353, 0.36764705882352944, 0.6294117647058823)
+    // Lambda parameters for chase
+    val lambdas = Array(0.0029585798816568047, 0.378698224852071, 0.6183431952662722)
 
     // Create a model
     val model = new DeletedInterpolation(mentalStatesFile, index, frequencyDir, highlightsCacheDir)
@@ -254,9 +270,9 @@ object RunDeletedInterpolation {
     // Load annotation to create queries
     annotationSet.foreach(annotationFile => {
       // Create a Word Neighborhood Model to generate queries
-      val wnm = new WordNeighborhood("")
+      val wnm = new WordNeighborhood(act, "")
       wnm.loadDetections(annotationFile)
-      val queries = wnm.formulateQueriesAAL().map(q => {
+      val queries = wnm.formulateQueriesAA().map(q => {
         List((q._1, Option(NLPUtils.POS_VBs)), (q._2, Option(NLPUtils.POS_NNs)))
       }).toArray
 

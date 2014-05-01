@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<annotation id="hug18" activity="hug" source="MTurk">
+    <object id="0" role="Subject">
+        <attribute type="Mental">awkward, calm, caring, caring, compassionate, compassionate, confused, consoling, friendly, irritated, loved, loved, nervous, obligated, reluctant, resolve, supportive, tender, trusting, uncomfortable, unsure</attribute>
+        <attribute type="Detection" />
+    </object>
+    <object id="1" role="Object">
+        <attribute type="Mental">anxious, anxious, bothered, confused, crying, frustrated, hopeless, insecure, intense, relieving, reserved, restless, sad, sad, sad, sad, tense, timid, uncomfortable, uncomfortable, uncomfortable, untrusting, upset, upset, upset, upset</attribute>
+        <attribute type="Detection" />
+    </object>
+    <object id="2" role="Settings">
+        <attribute type="Mental" />
+        <attribute type="Detection">home, home, home, indoor, indoor, living-room, living-room</attribute>
+    </object>
+    <object id="3" role="Others">
+        <attribute type="Mental" />
+        <attribute type="Detection">acquaintances, adult, adult, chair, chair, chair, friends, friends, friends, hug-multi, person, person, person, raising, raising, raising, sofa, sofa, sofa, table, table, table</attribute>
+    </object>
+</annotation>

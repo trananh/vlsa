@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<annotation id="hug19" activity="hug" source="MTurk">
+    <object id="0" role="Subject">
+        <attribute type="Mental">daring, elated, emotional, energetic, enthusiastic, excited, excited, excited, excited, excited, friendship, goofy, happy, happy, happy, happy, happy, joyful, joyful, joyful, joyful, nervous, thrilled, trusting</attribute>
+        <attribute type="Detection" />
+    </object>
+    <object id="1" role="Object">
+        <attribute type="Mental">confused, elated, energetic, enthusiastic, excited, excited, excited, excited, excited, excited, giddy, goofy, happy, happy, happy, happy, happy, jolly, joyful, joyful, thrilled, timid, trusting, victorious</attribute>
+        <attribute type="Detection" />
+    </object>
+    <object id="2" role="Settings">
+        <attribute type="Mental" />
+        <attribute type="Detection">arena, arena, arena, country, field, field, outdoor, outdoor, outdoor</attribute>
+    </object>
+    <object id="3" role="Others">
+        <attribute type="Mental" />
+        <attribute type="Detection">acquaintances, acquaintances, adult, adult, adult, friends, friends, hug-multi, jogging, jogging, jogging, person, person, raising, raising, raising, running, running, running, walking, walking, waving, waving</attribute>
+    </object>
+</annotation>

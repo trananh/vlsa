@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<annotation id="hug14" activity="hug" source="MTurk">
+    <object id="0" role="Subject">
+        <attribute type="Mental">accomplished, amused, appreciative, celebratory, ecstatic, ecstatic, ecstatic, energetic, excited, excited, excited, exuberant, giddy, goofy, goofy, happy, happy, happy, happy, happy, intense, joyful, joyful, overjoyed, overjoyed, proud, quick, relieved, relieved, thrilled</attribute>
+        <attribute type="Detection" />
+    </object>
+    <object id="1" role="Object">
+        <attribute type="Mental">amused, amused, celebratory, ecstatic, embarrassed, enthusiastic, excited, grateful, happy, happy, happy, happy, happy, happy, honored, nauseous, overwhelmed, pleased, proud, proud, shocked, shocked, surprised, surprised, surprised, surprised, surprised, surprised, worried</attribute>
+        <attribute type="Detection" />
+    </object>
+    <object id="2" role="Settings">
+        <attribute type="Mental" />
+        <attribute type="Detection">arena, arena, arena, indoor, indoor, indoor, suburb</attribute>
+    </object>
+    <object id="3" role="Others">
+        <attribute type="Mental" />
+        <attribute type="Detection">acquaintances, acquaintances, adult, adult, adult, carrying, carrying, carrying, chair, chair, chair, clapping, friends, friends, hug-multi, hug-multi, jogging, jogging, person, person, person, pick-up, pick-up, pick-up, put-down, raising, raising, raising, running, running, strangers, table, table, table, walking, walking, walking, waving, waving</attribute>
+    </object>
+</annotation>

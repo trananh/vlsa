@@ -1,6 +1,6 @@
 package edu.arizona.sista.vlsa.models.evaluation
 
-import edu.arizona.sista.vlsa.data.VideoAnnotation
+import edu.arizona.sista.vlsa.models.data.VideoAnnotation
 import edu.arizona.sista.vlsa.math.{Stats, Metrics}
 import java.io.FileWriter
 import junit.framework.Assert._

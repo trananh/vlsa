@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<annotation id="hug29" activity="hug" source="MTurk">
+    <object id="0" role="Subject">
+        <attribute type="Mental">confused, crying, distraught, elated, emotional, emotional, grateful, happy, happy, happy, happy, happy, overwhelmed, relieved, relieved, relieved, relieved, sad, scared, scared, tearful</attribute>
+        <attribute type="Detection" />
+    </object>
+    <object id="1" role="Object">
+        <attribute type="Mental">calm, confused, happy, inquisitive, loved, nervous, overwhelmed, quiet, relieved, relieved, relieved, scared, scared, shocked, sullen, surprised</attribute>
+        <attribute type="Detection" />
+    </object>
+    <object id="2" role="Settings">
+        <attribute type="Mental" />
+        <attribute type="Detection">alley, outdoor, outdoor, outdoor, park, playground, street, street, suburb, suburb</attribute>
+    </object>
+    <object id="3" role="Others">
+        <attribute type="Mental" />
+        <attribute type="Detection">adult, adult, adult, car, car, car, chair, child, child, child, hug-multi, parent-child, parent-child, parent-child, person, person, person, pick-up, raising, tree, truck, walking, walking</attribute>
+    </object>
+</annotation>

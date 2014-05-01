@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<annotation id="hug10" activity="hug" source="MTurk">
+    <object id="0" role="Subject">
+        <attribute type="Mental">caring, congratulatory, elated, excited, finalized, friendship, grateful, happy, happy, joyful, polite, resigned, respecting, sad, sincere, stress, tired, victorious</attribute>
+        <attribute type="Detection" />
+    </object>
+    <object id="1" role="Object">
+        <attribute type="Mental">accomplished, careless, concerned, disappointed, dutiful, elated, emotional, excited, exhausted, exhausted, fatigued, happy, happy, lost, overjoyed, relieved, relieved, relieved, surprised, tired</attribute>
+        <attribute type="Detection" />
+    </object>
+    <object id="2" role="Settings">
+        <attribute type="Mental" />
+        <attribute type="Detection">arena, arena, arena, field, indoor, indoor, outdoor, outdoor, outdoor, suburb</attribute>
+    </object>
+    <object id="3" role="Others">
+        <attribute type="Mental" />
+        <attribute type="Detection">acquaintances, acquaintances, acquaintances, adult, adult, adult, ball, ball, ball, carrying, carrying, carrying, chair, chair, hug-multi, hug-multi, hug-multi, person, person, raising, raising, raising, table, walking, walking, walking, waving, waving</attribute>
+    </object>
+</annotation>

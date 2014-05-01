@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<annotation id="hug22" activity="hug" source="MTurk">
+    <object id="0" role="Subject">
+        <attribute type="Mental">comfort, confident, elated, eventuality, excited, excited, excited, excited, exuberant, happy, happy, happy, happy, hopeful, joyful, joyful, loved, loved, loved, loved, loved, overwhelmed, overwhelmed, passionate, relaxed, surprised, surprised, trusting</attribute>
+        <attribute type="Detection" />
+    </object>
+    <object id="1" role="Object">
+        <attribute type="Mental">belonging, emotional, excited, excited, excited, excited, exuberant, grateful, happy, happy, happy, happy, happy, joyful, joyful, joyful, loved, loved, loved, loved, loved, passionate, passionate, relieved, relieved, relieved, relieved, triumphant</attribute>
+        <attribute type="Detection" />
+    </object>
+    <object id="2" role="Settings">
+        <attribute type="Mental" />
+        <attribute type="Detection">outdoor, outdoor, outdoor</attribute>
+    </object>
+    <object id="3" role="Others">
+        <attribute type="Mental" />
+        <attribute type="Detection">acquaintances, adult, adult, carrying, friends, hug-multi, lovers, lovers, lovers, person, person, person, raising, raising</attribute>
+    </object>
+</annotation>

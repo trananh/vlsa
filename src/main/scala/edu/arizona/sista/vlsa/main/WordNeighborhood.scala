@@ -1,15 +1,17 @@
 package edu.arizona.sista.vlsa.main
 
 import com.google.gson.Gson
-import edu.arizona.sista.vlsa.data.DetectionsAnnotation.DetectionTypes
-import edu.arizona.sista.vlsa.data.{DetectionsAnnotation, VideoAnnotation}
 import edu.arizona.sista.vlsa.experiments.NeighborhoodExperiment
 import edu.arizona.sista.vlsa.main.WordNeighborhood.ModelTypes
 import edu.arizona.sista.vlsa.main.WordNeighborhood.ModelTypes.ModelTypes
 import edu.arizona.sista.vlsa.math.Stats
+import edu.arizona.sista.vlsa.models.data.DetectionsAnnotation.DetectionTypes
+import edu.arizona.sista.vlsa.models.data.VideoAnnotation.Roles
+import edu.arizona.sista.vlsa.models.data.{DetectionsAnnotation, VideoAnnotation}
 import edu.arizona.sista.vlsa.models.evaluation.Evaluation
+import edu.arizona.sista.vlsa.models.text.ie.neighborhood.NLPNeighborhood.ActorMode
 import edu.arizona.sista.vlsa.models.text.ie.neighborhood.{WebNeighborhood, VecNeighborhood, DocNeighborhood}
-import edu.arizona.sista.vlsa.models.text.ie.{BackOffLinearInterpolation, DeletedInterpolation}
+import edu.arizona.sista.vlsa.models.text.ie.{NLPDeletedInterpolation, HighlightsDeletedInterpolation, BackOffLinearInterpolation, DeletedInterpolation}
 import edu.arizona.sista.vlsa.search.lucene.IndexSearcher
 import edu.arizona.sista.vlsa.search.web.BingSearcher
 import edu.arizona.sista.vlsa.utils.NLPUtils
@@ -24,20 +26,22 @@ import scala.collection.mutable.ListBuffer
   * scenes.
   *
   * @constructor An information-extraction application that uses the word-neighborhood models.
+  * @param activity The main activity.
   * @param statesDictionary Path to file containing mental state terms.
   * @param distCacheDirectory Directory used for caching intermediate distribution results from
-  *                       various queries.
+  *                           back-off linear interpolation models.
   *
   * @author trananh
   */
-class WordNeighborhood(val statesDictionary: String,
+class WordNeighborhood(var activity: String, val statesDictionary: String,
                        var distCacheDirectory: Option[String] = None) {
 
   /** Detection labels discovered from the video. */
   val detections: DetectionsAnnotation = new DetectionsAnnotation()
-  var activity: String = "chase"
 
   /** Information extraction models that uses the word-neighborhood approach. */
+  var delNLPModel: Option[NLPDeletedInterpolation] = None
+  var delCorefModel: Option[HighlightsDeletedInterpolation] = None
   var delDocModel: Option[DeletedInterpolation] = None
   var docModel: Option[DocNeighborhood] = None
   var vecModel: Option[VecNeighborhood] = None
@@ -61,6 +65,54 @@ class WordNeighborhood(val statesDictionary: String,
     val annotation = VideoAnnotation.fromXML(annotationFile)
     annotation.detections.values.foreach(d => detections.addDetections(d.getAllDetections(): _*))
     activity = annotation.activity
+  }
+
+  /** Load video detections from annotation file for the subject (of the activity).
+    * @param annotationFile Path to file containing detections annotation.
+    */
+  def loadSubjectDetections(annotationFile: String) {
+    val annotation = VideoAnnotation.fromXML(annotationFile)
+    annotation.detections.foreach(kv => {
+      if (Roles.Object != kv._1) {
+        detections.addDetections(kv._2.getAllDetections(): _*)
+      }
+    })
+    activity = annotation.activity
+  }
+
+  /** Load video detections from annotation file for the object (of the activity).
+    * @param annotationFile Path to file containing detections annotation.
+    */
+  def loadObjectDetections(annotationFile: String) {
+    val annotation = VideoAnnotation.fromXML(annotationFile)
+    annotation.detections.foreach(kv => {
+      if (Roles.Subject != kv._1) {
+        detections.addDetections(kv._2.getAllDetections(): _*)
+      }
+    })
+    activity = annotation.activity
+  }
+
+  /** Initialize the NLP Deleted Interpolation model.
+    *
+    * @param indexDir Path to the corpus index.
+    * @param frequencyDir Path to the directory containing the cached frequency data.
+    * @param highlightsDir Path to the directory containing the cached highlights for docs.
+    */
+  def initDelNLPNeighborhood(indexDir: String, frequencyDir: String, highlightsDir: String){
+    delNLPModel = Option(new NLPDeletedInterpolation(statesDictionary, indexDir, frequencyDir, highlightsDir))
+  }
+
+  /** Initialize the Coref Deleted Interpolation model.
+    *
+    * @param indexDir Path to the corpus index.
+    * @param frequencyDir Path to the directory containing the cached frequency data.
+    * @param highlightsDir Path to the directory containing the cached highlights for docs.
+    * @param nlpFile Path to the cached NLP highlights file.
+    */
+  def initDelCorefNeighborhood(indexDir: String, frequencyDir: String, highlightsDir: String, nlpFile: String){
+    delCorefModel = Option(new HighlightsDeletedInterpolation(statesDictionary, indexDir, frequencyDir, highlightsDir,
+      new File(nlpFile)))
   }
 
   /** Initialize the Deleted Interpolation model.
@@ -107,6 +159,16 @@ class WordNeighborhood(val statesDictionary: String,
   }
 
   /** Clear the model and free any memory usage. */
+  def clearDelNLPNeighborhood() {
+    delNLPModel = None
+  }
+
+  /** Clear the model and free any memory usage. */
+  def clearDelCorefNeighborhood() {
+    delCorefModel = None
+  }
+
+  /** Clear the model and free any memory usage. */
   def clearDelDocNeighborhood() {
     delDocModel = None
   }
@@ -130,7 +192,7 @@ class WordNeighborhood(val statesDictionary: String,
     webModel = None
     webModelDataDir = ""
   }
-  
+
   /** Clear the model and free any memory usage. */
   def clearBaseline() {
     baselineModel.get.clear()
@@ -190,7 +252,7 @@ class WordNeighborhood(val statesDictionary: String,
     val sorted = scores.sortWith(_._2 > _._2)
     var mass = 0.0
     var i = 0
-    while (mass < alpha) {
+    while (mass < alpha && i < sorted.size) {
       mass += sorted(i)._2
       i += 1
     }
@@ -271,6 +333,43 @@ class WordNeighborhood(val statesDictionary: String,
     actors.foreach(a => {
       locations.foreach(l => {
         queries.append((activity, a, l))
+      })
+    })
+
+    queries.toArray
+  }
+
+  /** Formulate all combinations of ("activity", "actor-type", "relationship") triplet query terms
+    * based on found detections.  This is referred to as the AAR pattern.
+    *
+    * @return Triplets of query terms following the AAR pattern.
+    */
+  def formulateQueriesAAR(): Array[(String, String, String)] = {
+    // Retrieve the detections, for each detection, convert to common word form(s).
+    // For example, "tv" -> "television", "running" -> "run", "running"
+    val actorDetections = new ListBuffer[String]()
+    actorDetections.appendAll(detections.getDetections(DetectionTypes.Actors))
+    var actors = actorDetections.toSet
+
+    // Get rid of general instances if specific instances exist
+    if (actors.contains("person")) {
+      if (actors.contains("policeman") || actors.contains("child"))
+        actors = actors - "person"
+    }
+    actorDetections.clear()
+    actors.foreach(d => actorDetections.appendAll(DetectionsAnnotation.getCommonWordForms(d)))
+    actors = actorDetections.map(e => NLPUtils.lemmatizeTerms(Array(e))(0)).toSet
+
+    val relationshipDetections = new ListBuffer[String]()
+    detections.getDetections(DetectionTypes.Relationships).foreach(d =>
+      relationshipDetections.appendAll(DetectionsAnnotation.getCommonWordForms(d)))
+    val relationships = relationshipDetections.map(e => NLPUtils.lemmatizeTerms(Array(e))(0)).toSet
+
+    // Formulate query combinations
+    val queries = new ListBuffer[(String, String, String)]()
+    actors.foreach(a => {
+      relationships.foreach(r => {
+        queries.append((activity, a, r))
       })
     })
 
@@ -415,8 +514,8 @@ class WordNeighborhood(val statesDictionary: String,
     * Based on Collins1997.
     *
     * @param queries The different query sets, each containing multiple back-off levels.
-    * @param model The type of neighborhood model to use for queries, defaults to DOC.
     * @param lambdas Parameters of linear interpolation.
+    * @param model The type of neighborhood model to use for queries, defaults to DOC.
     * @param eval The evaluation labels for score tuning (for DEBUG purposes, defaults to None).
     *
     * @return Distribution over mental states for the query, as list of (word, score) pairs.
@@ -447,23 +546,34 @@ class WordNeighborhood(val statesDictionary: String,
 
   }
 
-
   /** Run deleted interpolation using the documents-based model search model.
     *
     * Based on Brants2000.
     *
     * @param queries The different query sets, each containing multiple n-gram levels.
     * @param lambdas Parameters of linear interpolation.
+    * @param model The type of neighborhood model to use for queries, defaults to DOC-DEL.
     *
     * @return Distribution over mental states for the query, as list of (word, score) pairs.
     */
-  def deletedInterpolation(queries: Array[List[(String, Option[Set[String]])]],
-                           lambdas: Array[Double]): List[(String, Double)] = {
-
+  def deletedInterpolation(queries: Array[List[(String, Option[Set[String]])]], lambdas: Array[Double],
+                           model: ModelTypes = ModelTypes.Document): List[(String, Double)] = {
     // Run query and average the distribution of each triplet
     val allResults = new mutable.HashMap[String, Double]()
     queries.foreach(query => {
-      val result = delDocModel.get.processQueryTuple(query, lambdas)
+      var result: List[(String, Double)] = null
+      model match {
+        case ModelTypes.Document => {
+          result = delDocModel.get.processQueryTuple(query, lambdas)
+        }
+        case ModelTypes.Coref => {
+          result = delCorefModel.get.processQueryTuple(query, lambdas)
+        }
+        case ModelTypes.NLP => {
+          result = delNLPModel.get.processQueryTuple(query, lambdas)
+        }
+        case _ => throw new Exception("Unrecognized deleted-interpolation model.")
+      }
       result.foreach(kv => {
         allResults.put(kv._1, allResults.getOrElse(kv._1, 0.0) + kv._2)
       })
@@ -472,8 +582,8 @@ class WordNeighborhood(val statesDictionary: String,
     assert(math.abs(distribution.map(_._2).sum - 1.0) < Stats.DoubleEpsilon)
 
     distribution.sortWith(_._2 > _._2)
-  }
 
+  }
 
   /** Process a movie using the baseline model, which outputs all mental states from
     * the dictionary as a uniform distribution.
@@ -498,12 +608,16 @@ class WordNeighborhood(val statesDictionary: String,
     * @param eval Evaluation object.
     * @param vecPrunePct Prune parameter for the vector neighborhood.
     * @param docPrunePct Prune parameter for the doc neighborhood.
+    * @param delDocPrunePct Prune parameter for the deleted interpolation model.
+    * @param delCorefPrunePct Prune parameter for the deleted interpolation with coref-extended highlights model.
+    * @param delNLPPrunePct Prune parameter for the deleted interpolation with NLP model.
     * @param debugMode Prints out some extra scores for calibrating if True.
     *
     * @return List of normalized (word, score) pairs that is the mental states distribution.
     */
-  def process(eval: Evaluation, vecPrunePct: Option[Double] = Option(0.15), docPrunePct: Option[Double] = Option(0.8),
-              delDocPrunePct: Option[Double] = Option(0.65), debugMode: Boolean = false): List[(String, Double)] = {
+  def process(eval: Evaluation, vecPrunePct: Option[Double] = Option(0.10), docPrunePct: Option[Double] = Option(0.7),
+              delDocPrunePct: Option[Double] = Option(0.85), delCorefPrunePct: Option[Double] = Option(0.65),
+              delNLPPrunePct: Option[Double] = Option(0.85), debugMode: Boolean = false): List[(String, Double)] = {
 
     /* NOTE: All hard-coded file/directory locations below should be changed appropriately before running.
      * There are simply too many of which to expose them as command-line arguments for now.
@@ -519,8 +633,8 @@ class WordNeighborhood(val statesDictionary: String,
 
 
     /**
-      * VEC NEIGHBORHOOD
-      */
+     * VEC NEIGHBORHOOD
+     */
     var vecPruned: List[(String, Double)] = List[(String, Double)]()
     if (vecPrunePct.isDefined) {
       println("\nVEC NEIGHBORHOOD (Prune = " + vecPrunePct.get + ")\n")
@@ -543,12 +657,12 @@ class WordNeighborhood(val statesDictionary: String,
 
 
     /**
-      * DOC NEIGHBORHOOD
-      */
+     * DOC NEIGHBORHOOD
+     */
     var docPruned: List[(String, Double)] = List[(String, Double)]()
     if (docPrunePct.isDefined) {
       println("\nDOC NEIGHBORHOOD (Prune = " + docPrunePct.get + ")\n")
-      val docDataDir = "/Volumes/MyPassport/data/vlsa/neighborhood/chase/highlights/doc"
+      val docDataDir = "/Volumes/MyPassport/data/vlsa/neighborhood/" + activity + "/highlights/doc"
       val index = "/Volumes/MyPassport/data/text/indexes/Gigaword-stemmed"
       //val lambdas = Array(0.2, 0.5)
       val lambdas = Array(0.25)
@@ -569,16 +683,22 @@ class WordNeighborhood(val statesDictionary: String,
 
     /**
      * DELETED DOC NEIGHBORHOOD
+     *
+     * Lambda parameters for search tuples (trained on the pilot videos).
+     *
+     *    AA (chase): Array(0.0029585798816568047, 0.378698224852071, 0.6183431952662722)
+     *
+     *    AA (hug): Array(0.0, 0.3916083916083916, 0.6083916083916084)
      */
     var delDocPruned: List[(String, Double)] = List[(String, Double)]()
     if (delDocPrunePct.isDefined) {
       println("\nDEL NEIGHBORHOOD (Prune = " + delDocPrunePct.get + ")\n")
-      val lambdas = Array(0.0029411764705882353, 0.36764705882352944, 0.6294117647058823)
-      val delDocIndex = "/Volumes/MyPassport/data/text/indexes/Gigaword-stemmed"
-      val frequencyDataDir = "/Volumes/MyPassport/data/vlsa/neighborhood/chase/frequency/doc"
-      val highlightsDataDir = "/Volumes/MyPassport/data/vlsa/neighborhood/chase/highlights/doc"
-      initDelDocNeighborhood(delDocIndex, frequencyDataDir, highlightsDataDir)
-      val delDocResults = deletedInterpolation(queriesWithPOS, lambdas)
+      val lambdas = Array(0.0029585798816568047, 0.378698224852071, 0.6183431952662722)
+      val docIndex = "/Volumes/MyPassport/data/text/indexes/Gigaword-stemmed"
+      val frequencyDataDir = "/Volumes/MyPassport/data/vlsa/neighborhood/" + activity + "/frequency/doc"
+      val highlightsDataDir = "/Volumes/MyPassport/data/vlsa/neighborhood/" + activity + "/highlights/doc"
+      initDelDocNeighborhood(docIndex, frequencyDataDir, highlightsDataDir)
+      val delDocResults = deletedInterpolation(queriesWithPOS, lambdas, ModelTypes.Document)
       clearDelDocNeighborhood()
 
       if (debugMode) {
@@ -592,27 +712,108 @@ class WordNeighborhood(val statesDictionary: String,
     }
 
 
+    /**
+     * COREF DELETED NEIGHBORHOOD
+     *
+     * Lambda parameters for search tuples (trained on the pilot videos).
+     *
+     *    AA (chase-coref): Array(0.0, 0.08650236657417985, 0.9134976334258201)
+     *    AA (chase-win-0): Array(0.0024449877750611247, 0.3643031784841076, 0.6332518337408313)
+     *    AA (chase-win-1): Array(0.0, 0.32673267326732675, 0.6732673267326733)
+     *    AA (chase-win-2): Array(0.0, 0.2620987062769526, 0.7379012937230475)
+     *    AA (chase-win-3): Array(0.0, 0.2484516779490134, 0.7515483220509867)
+     *
+     *    AA (hug-coref): Array(0.0030309833857207003, 0.05814997754827122, 0.938819039066008)
+     */
+    var delCorefPruned: List[(String, Double)] = List[(String, Double)]()
+    if (delCorefPrunePct.isDefined) {
+      println("\nDEL COREF NEIGHBORHOOD (Prune = " + delCorefPrunePct.get + ")\n")
+      val lambdas = Array(0.0, 0.08650236657417985, 0.9134976334258201)  /* Reminder: Update! */
+      val docIndex = "/Volumes/MyPassport/data/text/indexes/Gigaword-stemmed"
+      val frequencyDataDir = "/Volumes/MyPassport/data/vlsa/neighborhood/" + activity + "/frequency/nlp-coref"
+      val highlightsDataDir = "/Volumes/MyPassport/data/vlsa/neighborhood/" + activity + "/highlights/doc"
+      val nlpFile = "/Volumes/MyPassport/data/vlsa/neighborhood/" + activity + "/highlights/nlp/coref.txt"
+      initDelCorefNeighborhood(docIndex, frequencyDataDir, highlightsDataDir, nlpFile)
+      val delCorefResults = deletedInterpolation(queriesWithPOS, lambdas, ModelTypes.Coref)
+      clearDelCorefNeighborhood()
+
+      if (debugMode) {
+        println("\nDel Coref results:")
+        println(delCorefResults.mkString(", "))
+        println(delCorefResults.sortWith(_._2 > _._2).mkString(", "))
+        NeighborhoodExperiment.estimateCWSAF1Params(delCorefResults, eval)
+      }
+
+      delCorefPruned = Stats.normalizeScores(pruneByProbMass(delCorefResults, delCorefPrunePct.get))
+    }
+
+
+    /**
+     * NLP DELETED NEIGHBORHOOD
+     *
+     * Lambda parameters for search tuples (trained on the pilot videos).
+     *
+     *    AA (chase-nlp): Array(0.0035087719298245615, 0.1523809523809524, 0.844110275689223)
+     *    AA (chase-nlp-swirl): Array(0.00341130604288499,0.1476608187134503,0.8489278752436648)
+     *    AA (chase-nlp-subject): Array(0.015567765567765568,0.24267399267399267,0.7417582417582418)
+     *    AA (chase-nlp-object): Array(0.017733990147783252,0.1960591133004926,0.7862068965517242)
+     *
+     *    AAL (chase-nlp): Array(0.001876172607879925, 0.12195121951219512, 0.1651031894934334, 0.7110694183864915)
+     *
+     *    AA (hug-nlp): Array(0.008615188257817485, 0.10561582641991066, 0.8857689853222719)
+     */
+    var delNLPPruned: List[(String, Double)] = List[(String, Double)]()
+    if (delNLPPrunePct.isDefined) {
+      println("\nDEL NLP NEIGHBORHOOD (Prune = " + delNLPPrunePct.get + ")\n")
+      val lambdas = Array(0.0035087719298245615, 0.1523809523809524, 0.844110275689223)  /* Reminder: Update! */
+      val docIndex = "/Volumes/MyPassport/data/text/indexes/Gigaword-stemmed"
+      val frequencyDataDir = "/Volumes/MyPassport/data/vlsa/neighborhood/" + activity + "/frequency/nlp"
+      val highlightsDataDir = "/Volumes/MyPassport/data/vlsa/neighborhood/" + activity + "/highlights/doc"
+      initDelNLPNeighborhood(docIndex, frequencyDataDir, highlightsDataDir)
+      val delNLPResults = deletedInterpolation(queriesWithPOS, lambdas, ModelTypes.NLP)
+      clearDelNLPNeighborhood()
+
+      if (debugMode) {
+        println("\nDel NLP results:")
+        println(delNLPResults.mkString(", "))
+        println(delNLPResults.sortWith(_._2 > _._2).mkString(", "))
+        NeighborhoodExperiment.estimateCWSAF1Params(delNLPResults, eval)
+      }
+
+      delNLPPruned = Stats.normalizeScores(pruneByProbMass(delNLPResults, delNLPPrunePct.get))
+    }
+
+
     /** Combine for final results */
     val resultsMap = new mutable.HashMap[String, Double]()
     val allPairs: ListBuffer[(String, Double)] = new ListBuffer[(String, Double)]()
     var numDistributions = 0.0
-    if (vecPrunePct.isDefined) {
+    if (vecPrunePct.isDefined && vecPrunePct.get > 0.0 && vecPruned.size > 0) {
       allPairs.appendAll(vecPruned)
       numDistributions += 1.0
     }
-    if (docPrunePct.isDefined) {
+    if (docPrunePct.isDefined && docPrunePct.get > 0.0 && docPruned.size > 0) {
       allPairs.appendAll(docPruned)
       numDistributions += 1.0
     }
-    if (delDocPrunePct.isDefined) {
+    if (delDocPrunePct.isDefined && delDocPrunePct.get > 0.0 && delDocPruned.size > 0) {
       allPairs.appendAll(delDocPruned)
+      numDistributions += 1.0
+    }
+    if (delCorefPrunePct.isDefined && delCorefPrunePct.get > 0.0 && delCorefPruned.size > 0) {
+      allPairs.appendAll(delCorefPruned)
+      numDistributions += 1.0
+    }
+    if (delNLPPrunePct.isDefined && delNLPPrunePct.get > 0.0 && delNLPPruned.size > 0) {
+      allPairs.appendAll(delNLPPruned)
       numDistributions += 1.0
     }
     allPairs.foreach(kv => {
       resultsMap.put(kv._1, resultsMap.getOrElse(kv._1, 0.0) + kv._2)
     })
     val results = resultsMap.toList.map(kv => (kv._1, kv._2 / numDistributions)).sortWith(_._2 > _._2)
-    assert(math.abs(1.0 - results.map(_._2).sum) < Stats.DoubleEpsilon)
+    assert(math.abs(results.map(_._2).sum) < Stats.DoubleEpsilon ||
+      math.abs(1.0 - results.map(_._2).sum) < Stats.DoubleEpsilon)
 
     results
 
@@ -627,7 +828,7 @@ object WordNeighborhood {
   /** Different types of models. */
   object ModelTypes extends Enumeration {
     type ModelTypes = Value
-    val Document, Vector, Web = Value
+    val Document, Vector, Web, Coref, NLP = Value
   }
 
 }
@@ -642,20 +843,23 @@ object RunWordNeighborhood {
      * We may consider doing something smarter in the future (e.g., using properties file).
      */
 
+    // Activity and its associated annotation set (26 videos for chase, 45 for hug)
+    val activity = "chase"
+    val annotationDir = "/Volumes/MyPassport/data/annotations/" + activity + "/xml/"
+    val annotationSet = (1 to 26).map(annotationDir + activity + "%02d".format(_) + ".xml")
+
     // Initialize some file locations needed for the models and evaluation
     val statesDictionary = "/Volumes/MyPassport/data/text/dictionaries/mental-states/states-adjectives.txt"
-    val cacheDirectory = "/Volumes/MyPassport/data/vlsa/neighborhood/chase/distributions"
-
-    // Generate annotation set
-    val annotationDir = "/Volumes/MyPassport/data/annotations/chase/xml/"
-    val annotationSet = (1 to 26).map(annotationDir + "chase" + "%02d".format(_) + ".xml")
+    val cacheDirectory = "/Volumes/MyPassport/data/vlsa/neighborhood/" + activity + "/distributions"
+    val mode = ActorMode.All
 
     // Run baseline model or not
     val runBaseline = false
 
+    println("\n\n===================\nActor Mode: " + mode.toString + "\n===================\n\n")
+
     // Keep list of scores (for each movie evaluated)
     val F1s = new ListBuffer[(Double, Double, Double)]()
-    val SAF1s = new ListBuffer[(Double, Double, Double)]()
     val CWSAF1s = new ListBuffer[(Double, Double, Double)]()
 
     // Iterate over each evaluation file
@@ -664,11 +868,30 @@ object RunWordNeighborhood {
       println("\n====\nProcessing file " + annotationFile)
 
       // Create a Word Neighborhood Model
-      val wnm = new WordNeighborhood(statesDictionary, distCacheDirectory = Option(cacheDirectory))
-      wnm.loadDetections(annotationFile)
+      val wnm = new WordNeighborhood(activity, statesDictionary, distCacheDirectory = Option(cacheDirectory))
 
       // Evaluation object
-      val eval = new Evaluation(annotationFile)
+      var eval: Evaluation = null
+
+      // Load detections (either for all, only the subject, or only the object).
+      mode match {
+        case ActorMode.Subject => {
+          wnm.loadSubjectDetections(annotationFile)
+          eval = new Evaluation(annotationFile, roles = Set(Roles.Subject))
+        }
+
+        case ActorMode.Object => {
+          wnm.loadObjectDetections(annotationFile)
+          eval = new Evaluation(annotationFile, roles = Set(Roles.Object))
+        }
+
+        case ActorMode.All => {
+          wnm.loadDetections(annotationFile)
+          eval = new Evaluation(annotationFile)
+        }
+
+        case _ => throw new Exception("Unrecognized mode.")
+      }
 
       if (runBaseline) {
 
@@ -676,47 +899,32 @@ object RunWordNeighborhood {
         println("\n====\nBaseline for file " + annotationFile + "\n")
         val baseline = wnm.baseline(eval)
         F1s.append(eval.F1(baseline.map(_._1).toSet))
-        SAF1s.append(eval.SAF1(baseline.map(_._1)))
         CWSAF1s.append(eval.CWSAF1(baseline))
 
       } else {
 
         /** Run model */
         println("\n====\nEvaluation for file " + annotationFile + "\n")
+
         val distribution = wnm.process(eval, debugMode = false,
-          vecPrunePct = Option(.10) /* .10 */, docPrunePct = None /* .70 */, delDocPrunePct = Option(.85) /* .85 */)
+          vecPrunePct = Option(.10) /* .10 */ , docPrunePct = None /* .70 */ , delDocPrunePct = None /* .85 */ ,
+          delCorefPrunePct = None /* .65 */ , delNLPPrunePct = Option(.55) /* .85 */)
+
         println("\n====\nFinal results:")
         println(distribution.sortWith(_._2 > _._2).mkString(", "))
         F1s.append(eval.F1(distribution.map(_._1).toSet))
-        SAF1s.append(eval.SAF1(distribution.map(_._1)))
         CWSAF1s.append(eval.CWSAF1(distribution))
 
       }
     })
 
-    // Print scores
-    def printF1s(f1s: List[(Double, Double, Double)]) = {
-      val f = f1s.map(_._1)
-      val p = f1s.map(_._2)
-      val r = f1s.map(_._3)
-      println("\nAvgP, AveR, AveF1\n" + ("=" * 17))
-      println((p.sum / p.size) + ", " + (r.sum / r.size) + ", " + (f.sum / f.size))
-      println("\nPrecisions\n" + p.mkString("\n"))
-      println("\nRecalls\n" + r.mkString("\n"))
-      println("\nF1s\n" + f.mkString("\n"))
-    }
-
     if (F1s.size > 0) {
       println("\n======\nSet F1\n======\n")
-      printF1s(F1s.toList)
-    }
-    if (SAF1s.size > 0) {
-      println("\n======\nSA F1\n======\n")
-      printF1s(SAF1s.toList)
+      Evaluation.printF1s(F1s.toList)
     }
     if (CWSAF1s.size > 0) {
       println("\n======\nCWSA F1\n======\n")
-      printF1s(CWSAF1s.toList)
+      Evaluation.printF1s(CWSAF1s.toList)
     }
 
   }
@@ -731,27 +939,19 @@ object RunExhaustPrunePercentage {
      * We may consider doing something smarter in the future (e.g., using properties file).
      */
 
+    // Activity and its associated annotation set (26 videos for chase, 45 for hug)
     val activity = "chase"
+    val annotationDir = "/Volumes/MyPassport/data/annotations/" + activity + "/xml/"
+    val annotationSet = (1 to 26).map(annotationDir + activity + "%02d".format(_) + ".xml")
 
     // Initialize some file locations needed for the models and evaluation
     val statesDictionary = "/Volumes/MyPassport/data/text/dictionaries/mental-states/states-adjectives.txt"
-    val annotationDir = "/Volumes/MyPassport/data/annotations/chase/xml/"
-    val cacheDirectory = "/Volumes/MyPassport/data/vlsa/neighborhood/chase/distributions"
-
-    // Generate annotation set
-    val annotationSet = (1 to 26).map(annotationDir + "chase" + "%02d".format(_) + ".xml")
+    val cacheDirectory = "/Volumes/MyPassport/data/vlsa/neighborhood/" + activity + "/distributions"
+    val mode = ActorMode.All
 
     // Keep list of scores (for each prune level)
     val F1s = new ListBuffer[(Double, Double, Double)]()
     val CWSAF1s = new ListBuffer[(Double, Double, Double)]()
-
-    // Find the average
-    def aveF1s(f1s: ListBuffer[(Double, Double, Double)]): (Double, Double, Double)  = {
-      val f = f1s.map(_._1)
-      val p = f1s.map(_._2)
-      val r = f1s.map(_._3)
-      (f.sum / f.size, p.sum / p.size, r.sum / r.size)
-    }
 
     // Iterate over each prune level
     for (pct <- (0.0 to 1.0 by 0.05)) {
@@ -764,44 +964,58 @@ object RunExhaustPrunePercentage {
       // Iterate over each evaluation file
       annotationSet.foreach(annotationFile => {
         // Create a Word Neighborhood Model
-        val wnm = new WordNeighborhood(statesDictionary, distCacheDirectory = Option(cacheDirectory))
-        wnm.loadDetections(annotationFile)
+        val wnm = new WordNeighborhood(activity, statesDictionary, distCacheDirectory = Option(cacheDirectory))
 
         // Evaluation object
-        val eval = new Evaluation(annotationFile)
+        var eval: Evaluation = null
+
+        // Load detections (either for all, only the subject, or only the object).
+        mode match {
+          case ActorMode.Subject => {
+            wnm.loadSubjectDetections(annotationFile)
+            eval = new Evaluation(annotationFile, roles = Set(Roles.Subject))
+          }
+
+          case ActorMode.Object => {
+            wnm.loadObjectDetections(annotationFile)
+            eval = new Evaluation(annotationFile, roles = Set(Roles.Object))
+          }
+
+          case ActorMode.All => {
+            wnm.loadDetections(annotationFile)
+            eval = new Evaluation(annotationFile)
+          }
+
+          case _ => throw new Exception("Unrecognized mode.")
+        }
+
         eval.log = false
 
         /** Run model */
         val distribution = wnm.process(eval, debugMode = false,
-          vecPrunePct = None /* .10 */, docPrunePct = None /* .70 */, delDocPrunePct = None /* .85 */)
+          vecPrunePct = None /* .10 */, docPrunePct = None /* .70 */, delDocPrunePct = None /* .85 */,
+          delCorefPrunePct = None /* .70 */, delNLPPrunePct = None /* .85 */)
 
         f1s.append(eval.F1(distribution.map(_._1).toSet))
         cwsaf1s.append(eval.CWSAF1(distribution))
       })
 
-      F1s.append(aveF1s(f1s))
-      println("\n====\nF1: " + F1s.last.toString())
-      CWSAF1s.append(aveF1s(cwsaf1s))
-      println("\n====\nCWSA-F1: " + CWSAF1s.last.toString())
-    }
+      F1s.append(Evaluation.aveF1s(f1s.toList))
+      println("\n======\nSet F1\n======\n")
+      Evaluation.printF1s(f1s.toList)
 
-    // Print scores
-    def printF1s(f1s: ListBuffer[(Double, Double, Double)]) = {
-      val f = f1s.map(_._1)
-      val p = f1s.map(_._2)
-      val r = f1s.map(_._3)
-      println("\nPrecisions\n" + p.mkString("\n"))
-      println("\nRecalls\n" + r.mkString("\n"))
-      println("\nF1s\n" + f.mkString("\n"))
+      CWSAF1s.append(Evaluation.aveF1s(cwsaf1s.toList))
+      println("\n======\nCWSA F1\n======\n")
+      Evaluation.printF1s(cwsaf1s.toList)
     }
 
     if (F1s.size > 0) {
-      println("\n======\nSet F1\n======\n")
-      printF1s(F1s)
+      println("\n======\nPrune Ave Set F1\n======\n")
+      Evaluation.printF1s(F1s.toList)
     }
     if (CWSAF1s.size > 0) {
-      println("\n======\nCWSA F1\n======\n")
-      printF1s(CWSAF1s)
+      println("\n======\nPrune Ave CWSA F1\n======\n")
+      Evaluation.printF1s(CWSAF1s.toList)
     }
 
   }

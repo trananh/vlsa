@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<annotation id="hug43" activity="hug" source="MTurk">
+    <object id="0" role="Subject">
+        <attribute type="Mental">calm, caring, caring, happy, happy, happy, happy, hot, joyful, loved, loved, loved, loved, loved, motherly, nurturing, passive, peaceful, protective, reassuring, routine, sweet, sweet, sympathetic, sympathetic, tender</attribute>
+        <attribute type="Detection" />
+    </object>
+    <object id="1" role="Object">
+        <attribute type="Mental">bewildered, comfortable, comforted, concerned, confused, content, content, curious, curious, happy, happy, loved, nervous, nervous, nervous, nurturing, overwhelmed, peaceful, proud, sad, scared, scared, secure, surprised, tense, trusting, uncomfortable, unsure</attribute>
+        <attribute type="Detection" />
+    </object>
+    <object id="2" role="Settings">
+        <attribute type="Mental" />
+        <attribute type="Detection">alley, outdoor, outdoor, outdoor, park, park, playground, suburb</attribute>
+    </object>
+    <object id="3" role="Others">
+        <attribute type="Mental" />
+        <attribute type="Detection">adult, adult, adult, carrying, carrying, child, child, child, person, raising, strangers, strangers, strangers</attribute>
+    </object>
+</annotation>

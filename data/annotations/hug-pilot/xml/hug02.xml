@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<annotation id="hug02" activity="hug" source="MTurk">
+    <object id="0" role="Subject">
+        <attribute type="Mental">anxious, anxious, anxious, apologetic, awkward, awkward, awkward, awkward, awkward, bemused, caring, cautious, concerned, confused, determined, gay, grateful, inadequate, nervous, nervous, nervous, nervous, obligated, reluctant, shy, sincere, timid, uncertain, uncertain, uncomfortable, uncomfortable, unsure, unwilling, vulnerable, worried</attribute>
+        <attribute type="Detection" />
+    </object>
+    <object id="1" role="Object">
+        <attribute type="Mental">amused, amused, amused, anxious, appreciative, awkward, awkward, awkward, awkward, cautious, charmed, confused, confused, confused, confused, confused, excited, flattered, forgiving, fun, gracious, grateful, happy, happy, happy, happy, passive, patient, reluctant, surprised, surprised, surprised, sympathetic, uncomfortable, unsure</attribute>
+        <attribute type="Detection" />
+    </object>
+    <object id="2" role="Settings">
+        <attribute type="Mental" />
+        <attribute type="Detection">home, home, home, indoor, indoor, indoor, kitchen, living-room, living-room, living-room</attribute>
+    </object>
+    <object id="3" role="Others">
+        <attribute type="Mental" />
+        <attribute type="Detection">adult, adult, adult, bag, chair, chair, chair, friends, friends, friends, hug-multi, hug-multi, jogging, person, person, person, raising, raising, running, sofa, sofa, sofa, table, table, table, walking</attribute>
+    </object>
+</annotation>

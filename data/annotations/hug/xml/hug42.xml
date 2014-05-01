@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<annotation id="hug42" activity="hug" source="MTurk">
+    <object id="0" role="Subject">
+        <attribute type="Mental">accepting, appreciative, concerned, cooperative, cooperative, empathetic, fearful, friendly, grateful, interested, loved, negotiating, nervous, open, open, righteous, trusting, understanding</attribute>
+        <attribute type="Detection" />
+    </object>
+    <object id="1" role="Object">
+        <attribute type="Mental">accepting, angry, apprehensive, calm, cautious, civil, dutiful, emotional, fearful, grateful, nervous, relieved, surprised, sympathetic, sympathetic, tentative, timid, trusting, understanding, worried</attribute>
+        <attribute type="Detection" />
+    </object>
+    <object id="2" role="Settings">
+        <attribute type="Mental" />
+        <attribute type="Detection">alley, alley, alley, outdoor, outdoor, outdoor, street, street, street</attribute>
+    </object>
+    <object id="3" role="Others">
+        <attribute type="Mental" />
+        <attribute type="Detection">adult, adult, adult, car, car, carrying, carrying, carrying, gun, person, person, person, police, police, raising, strangers, strangers, strangers, walking, walking</attribute>
+    </object>
+</annotation>

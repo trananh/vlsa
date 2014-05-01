@@ -9,7 +9,7 @@ import edu.arizona.sista.vlsa.corpus
 trait CorpusParser extends Iterable[corpus.Document] {
 
   /** The name of the corpus */
-  def corpusName: String = "Unknown"
+  var corpusName: String = "Unknown"
 
   /** Iterator for the corpus */
   def iterator: Iterator[corpus.Document]

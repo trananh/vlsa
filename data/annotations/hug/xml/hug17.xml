@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<annotation id="hug17" activity="hug" source="MTurk">
+    <object id="0" role="Subject">
+        <attribute type="Mental">affectionate, amused, caring, determined, determined, ecstatic, ecstatic, enjoyable, excited, excited, happy, happy, happy, happy, happy, happy, laughable, loved, loved, playful, silly, supportive, warm</attribute>
+        <attribute type="Detection" />
+    </object>
+    <object id="1" role="Object">
+        <attribute type="Mental">accepted, angry, angry, awkward, content, displeased, ecstasy, ecstatic, embraced, emotional, excited, happy, happy, happy, happy, happy, joyful, laughable, laughable, loved, nervous, playful, silly, surprised, surprised, surprised, surprised</attribute>
+        <attribute type="Detection" />
+    </object>
+    <object id="2" role="Settings">
+        <attribute type="Mental" />
+        <attribute type="Detection">indoor, indoor, industrial, industrial</attribute>
+    </object>
+    <object id="3" role="Others">
+        <attribute type="Mental" />
+        <attribute type="Detection">acquaintances, adult, adult, adult, friends, friends, hug-multi, hug-multi, hug-multi, jogging, jogging, jogging, jumping, person, person, person, raising, walking, walking, walking</attribute>
+    </object>
+</annotation>

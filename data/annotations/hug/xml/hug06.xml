@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<annotation id="hug06" activity="hug" source="MTurk">
+    <object id="0" role="Subject">
+        <attribute type="Mental">acting, appreciative, assertive, classy, congratulatory, dominating, dutiful, excited, gracious, grateful, happy, happy, happy, happy, happy, polite, recognized, sincere</attribute>
+        <attribute type="Detection" />
+    </object>
+    <object id="1" role="Object">
+        <attribute type="Mental">angry, annoyed, annoyed, confused, disliked, disturbed, dutiful, envious, honored, indifferent, insecure, irritated, mean, regular, repulsed, reserved, stable, unassuming, uncaring, unemotional, ungrateful, untrusting</attribute>
+        <attribute type="Detection" />
+    </object>
+    <object id="2" role="Settings">
+        <attribute type="Mental" />
+        <attribute type="Detection">arena, arena, indoor, indoor</attribute>
+    </object>
+    <object id="3" role="Others">
+        <attribute type="Mental" />
+        <attribute type="Detection">acquaintances, adult, adult, adult, carrying, carrying, carrying, hug-multi, hug-multi, hug-multi, person, person, pick-up, strangers, strangers, walking, walking, walking</attribute>
+    </object>
+</annotation>

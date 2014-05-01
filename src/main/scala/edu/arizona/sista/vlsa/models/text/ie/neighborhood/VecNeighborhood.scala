@@ -30,15 +30,24 @@ class VecNeighborhood(val vectorsBinFile: String) {
   /** CoreNLP processor */
   val processor: Processor = new CoreNLPProcessor(internStrings = false)
 
-  /** Instantiate a new word2vec model and load the binary data */
-  val vecModel = new Word2Vec()
-  vecModel.load(vectorsBinFile)
+  /** word2vec model */
+  var vecModel: Option[Word2Vec] = None
 
   /** Clear all open streams and internal memory usage. */
   def clear() {
     scores.clear()
     keywordsMap.clear()
-    vecModel.clear()
+
+    if (vecModel.isDefined) {
+      vecModel.get.clear()
+      vecModel = None
+    }
+  }
+
+  /** Load the model.  Only do this if we need to. */
+  def loadModel() {
+    vecModel = Option(new Word2Vec())
+    vecModel.get.load(vectorsBinFile)
   }
 
   /** Reset score for all tokens.
@@ -108,9 +117,12 @@ class VecNeighborhood(val vectorsBinFile: String) {
     *                 (defaults to Euclidean).
     */
   def process(queryTerms: List[String], distance: Scoring = VecNeighborhood.Scoring.ExpEuclideanBased) {
+    // Load the word2vec model if necessary
+    if (!vecModel.isDefined) loadModel()
+
     // Make sure each query term has a vector representation
     queryTerms.foreach(term => {
-      if (!vecModel.contains(term)) {
+      if (!vecModel.get.contains(term)) {
         println("Out of dictionary query term: " + term)
         return
       }
@@ -118,12 +130,12 @@ class VecNeighborhood(val vectorsBinFile: String) {
 
     // Get each keyword distance to the sum-vector of the search terms
     var score = 0.0
-    val searchVec = vecModel.normalize(vecModel.sumVector(queryTerms.toList))
+    val searchVec = vecModel.get.normalize(vecModel.get.sumVector(queryTerms.toList))
     scores.keySet.foreach(keyword => {
       score = 0.0
       distance match {
-        case Scoring.ExpCosineBased => score = vecModel.cosine(vecModel.vector(keyword), searchVec)
-        case Scoring.ExpEuclideanBased => score = vecModel.euclidean(vecModel.vector(keyword), searchVec)
+        case Scoring.ExpCosineBased => score = vecModel.get.cosine(vecModel.get.vector(keyword), searchVec)
+        case Scoring.ExpEuclideanBased => score = vecModel.get.euclidean(vecModel.get.vector(keyword), searchVec)
         case _ => throw new Exception("Unrecognized scoring function.")
       }
 

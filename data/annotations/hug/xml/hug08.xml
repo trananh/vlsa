@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<annotation id="hug08" activity="hug" source="MTurk">
+    <object id="0" role="Subject">
+        <attribute type="Mental">dutiful, excited, grateful, happy, happy, happy, happy, happy, happy, happy, joyful, satisfied, silly, smiling</attribute>
+        <attribute type="Detection" />
+    </object>
+    <object id="1" role="Object">
+        <attribute type="Mental">anxious, calm, content, dutiful, excited, happy, happy, happy, happy, happy, nervous, nervous, proud, relieved, surprised, surprised, timid</attribute>
+        <attribute type="Detection" />
+    </object>
+    <object id="2" role="Settings">
+        <attribute type="Mental" />
+        <attribute type="Detection">arena, indoor, indoor</attribute>
+    </object>
+    <object id="3" role="Others">
+        <attribute type="Mental" />
+        <attribute type="Detection">acquaintances, acquaintances, acquaintances, adult, adult, adult, hug-multi, jogging, person, person, raising, raising, raising, running, running, walking, walking</attribute>
+    </object>
+</annotation>

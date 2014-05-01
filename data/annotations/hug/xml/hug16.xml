@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<annotation id="hug16" activity="hug" source="MTurk">
+    <object id="0" role="Subject">
+        <attribute type="Mental">affectionate, caring, caring, emotional, emotional, enjoyable, excited, friendly, happy, happy, happy, happy, innocent, joyful, loved, loved, loved, loved, sweet, sweet</attribute>
+        <attribute type="Detection" />
+    </object>
+    <object id="1" role="Object">
+        <attribute type="Mental">amused, bothered, childish, confused, dutiful, feeling, happy, happy, happy, innocent, inspired, joyful, lackluster, love, loved, loved, loved, nervous, nonplussed, patient, quizzitive, surprised, sweet, sweet, taught, unimpressed</attribute>
+        <attribute type="Detection" />
+    </object>
+    <object id="2" role="Settings">
+        <attribute type="Mental" />
+        <attribute type="Detection">alley, outdoor, outdoor, outdoor, street, street, suburb, suburb</attribute>
+    </object>
+    <object id="3" role="Others">
+        <attribute type="Mental" />
+        <attribute type="Detection">acquaintances, acquaintances, car, car, car, carrying, carrying, carrying, child, child, child, friends, friends, friends, hug-multi, hug-multi, person, person, put-down, put-down, raising, raising, walking, walking, waving, waving</attribute>
+    </object>
+</annotation>

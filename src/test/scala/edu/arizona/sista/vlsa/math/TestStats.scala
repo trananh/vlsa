@@ -49,4 +49,28 @@ class TestStats extends AssertionsForJUnit {
     assertTrue(math.abs(r3 - g3) < Stats.DoubleEpsilon)
   }
 
+
+  @Test
+  def testEntropy() {
+    var f = List(("a", 10), ("b", 0))
+    assertTrue(math.abs(0.0 - Stats.entropy(f)) < Stats.DoubleEpsilon)
+    var p = List(1.0, 0.0)
+    assertTrue(math.abs(0.0 - Stats.entropy(p)) < Stats.DoubleEpsilon)
+
+    p = List(0.0)
+    assertTrue(math.abs(0.0 - Stats.entropy(p)) < Stats.DoubleEpsilon)
+    p = List(1.0)
+    assertTrue(math.abs(0.0 - Stats.entropy(p)) < Stats.DoubleEpsilon)
+
+    f = List(("a", 10), ("b", 10))
+    assertTrue(math.abs(1.0 - Stats.entropy(f)) < Stats.DoubleEpsilon)
+    p = List(0.5, 0.5)
+    assertTrue(math.abs(1.0 - Stats.entropy(p)) < Stats.DoubleEpsilon)
+
+    f = List(("a", 4), ("b", 2), ("c", 1), ("d", 1))
+    assertTrue(math.abs((7.0/4.0) - Stats.entropy(f)) < Stats.DoubleEpsilon)
+    p = List(1.0/2, 1.0/4, 1.0/8, 1.0/8)
+    assertTrue(math.abs((7.0/4.0) - Stats.entropy(p)) < Stats.DoubleEpsilon)
+  }
+
 }

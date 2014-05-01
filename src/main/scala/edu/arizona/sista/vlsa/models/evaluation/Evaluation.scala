@@ -1,10 +1,9 @@
 package edu.arizona.sista.vlsa.models.evaluation
 
-import edu.arizona.sista.processors.Processor
-import edu.arizona.sista.vlsa.data.VideoAnnotation
-import edu.arizona.sista.vlsa.data.VideoAnnotation.Roles
-import edu.arizona.sista.vlsa.data.VideoAnnotation.Roles.Roles
 import edu.arizona.sista.vlsa.math.{Stats, Metrics, VectorMath}
+import edu.arizona.sista.vlsa.models.data.VideoAnnotation
+import edu.arizona.sista.vlsa.models.data.VideoAnnotation.Roles
+import edu.arizona.sista.vlsa.models.data.VideoAnnotation.Roles.Roles
 import edu.arizona.sista.vlsa.models.evaluation.Evaluation.SimilarityScore
 import edu.arizona.sista.vlsa.models.evaluation.Evaluation.SimilarityScore.SimilarityScore
 import edu.arizona.sista.vlsa.models.text.word.Word2Vec
@@ -22,13 +21,13 @@ import scala.collection.mutable.ListBuffer
   *
   * @author trananh
   */
-class Evaluation(var groundTruthData: String) {
+class Evaluation(var groundTruthData: String, var roles: Set[Roles] = Set(Roles.Subject, Roles.Object)) {
 
   /** Log the scores computed to standard out if true. */
   var log = true
 
   /** Load ground-truth data */
-  val goldFreq = loadGroundTruthLabels(groundTruthData)
+  val goldFreq = loadGroundTruthLabels(groundTruthData, roles)
   val goldSet = goldFreq.getOccurringTokens().map(_(0))
 
   /** Load vector binary space */
@@ -42,7 +41,7 @@ class Evaluation(var groundTruthData: String) {
     *              to both the subject and the object.
     * @return Frequency dictionary of mental states.
     */
-  private def loadGroundTruthLabels(annotationFile: String, roles: Set[Roles] = Set(Roles.Subject, Roles.Object))
+  private def loadGroundTruthLabels(annotationFile: String, roles: Set[Roles])
   : FrequencyDictionary[String] = {
     // Get the mental states
     val video = VideoAnnotation.fromXML(annotationFile)
@@ -224,6 +223,13 @@ class Evaluation(var groundTruthData: String) {
   def calcSAF1(response: List[String], gold: List[String],
                 responseMatches: Array[Int], goldMatches: Array[Int], scores: Array[Array[Double]])
   : (Double, Double, Double) = {
+
+    // Take care of edge case
+    if (response.size == 0) {
+      val p = 1.0; val r = 0.0; val f1 = Metrics.F1(p, r)
+      return (f1, p, r)
+    }
+
     // Compute similarity aligned precision & recall
     val precision = response.zipWithIndex.map(e => scores(e._2)(responseMatches(e._2))).sum / response.size.toDouble
     val recall = gold.zipWithIndex.map(e => scores(goldMatches(e._2))(e._2)).sum / gold.size.toDouble
@@ -298,6 +304,13 @@ class Evaluation(var groundTruthData: String) {
   def calcWSAF1(response: List[(String, Double)], gold: List[(String, Double)],
                    responseMatches: Array[Int], goldMatches: Array[Int], scores: Array[Array[Double]])
   : (Double, Double, Double) = {
+
+    // Take care of edge case
+    if (response.size == 0) {
+      val p = 1.0; val r = 0.0; val f1 = Metrics.F1(p, r)
+      return (f1, p, r)
+    }
+
     // Compute similarity aligned precision & recall
     val precision = response.zipWithIndex.map(e => e._1._2 * scores(e._2)(responseMatches(e._2))).sum
     val recall = gold.zipWithIndex.map(e => e._1._2 * scores(goldMatches(e._2))(e._2)).sum
@@ -403,6 +416,13 @@ class Evaluation(var groundTruthData: String) {
                                responseMatches: Array[List[Int]], goldMatches: Array[List[Int]],
                                scores: Array[Array[Double]])
   : (Double, Double, Double) = {
+
+    // Take care of edge case
+    if (response.size == 0) {
+      val p = 1.0; val r = 0.0; val f1 = Metrics.F1(p, r)
+      return (f1, p, r)
+    }
+
     // For each label, find the max similarity score of the other set mapped to it
     val resSim = responseMatches.zipWithIndex.map(e => e._1.map(gIdx => scores(e._2)(gIdx)).max)
     val goldSim = goldMatches.zipWithIndex.map(e => e._1.map(rIdx => scores(rIdx)(e._2)).max)
@@ -606,6 +626,31 @@ object Evaluation {
   object SimilarityScore extends Enumeration {
     type SimilarityScore = Value
     val HSO, W2V = Value
+  }
+
+  /** Find the average score for a list of F1 scores.
+    * @param f1s List of F1 scores in the form of (F1, precision, recall) tuples.
+    * @return The average F1 score tuple in the form of (F1, precision, recall).
+    */
+  def aveF1s(f1s: List[(Double, Double, Double)]): (Double, Double, Double) = {
+    val f = f1s.map(_._1)
+    val p = f1s.map(_._2)
+    val r = f1s.map(_._3)
+    (f.sum / f.size, p.sum / p.size, r.sum / r.size)
+  }
+
+  /** Pretty print the list of F1 scores.
+    * @param f1s List of F1 scores in the form of (F1, precision, recall) tuples.
+    */
+  def printF1s(f1s: List[(Double, Double, Double)]) {
+    val f = f1s.map(_._1)
+    val p = f1s.map(_._2)
+    val r = f1s.map(_._3)
+    println("\nAvgP, AveR, AveF1\n" + ("=" * 17))
+    println((p.sum / p.size) + ", " + (r.sum / r.size) + ", " + (f.sum / f.size))
+    println("\nPrecisions\n" + p.mkString("\n"))
+    println("\nRecalls\n" + r.mkString("\n"))
+    println("\nF1s\n" + f.mkString("\n"))
   }
 
 }

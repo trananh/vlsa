@@ -24,14 +24,14 @@ object Metrics {
     * @param fp False positives.
     * @return Precision score.
     */
-  def precision(tp: Double, fp: Double): Double =  tp / (tp + fp)
+  def precision(tp: Double, fp: Double): Double = if ((tp + fp) == 0.0) 1.0 else tp / (tp + fp)
 
   /** Compute recall base on true-positives and false-negatives.
     * @param tp True positives.
     * @param fn False negatives.
     * @return Recall score.
     */
-  def recall(tp: Double, fn: Double): Double = tp / (tp + fn)
+  def recall(tp: Double, fn: Double): Double = if ((tp + fn) == 0.0) 1.0 else tp / (tp + fn)
 
   /** Compute the F1 (harmonic) score base on precision and recall.
     * @param precision Precision score.

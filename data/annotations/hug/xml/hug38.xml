@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<annotation id="hug38" activity="hug" source="MTurk">
+    <object id="0" role="Subject">
+        <attribute type="Mental">adoring, afraid, brave, crazy, crazy, eager, ecstatic, emotional, excited, excited, excited, fearful, grateful, happy, happy, happy, happy, joyful, nervous, nervous, nonplussed, obsessed, overwhelmed, urgent</attribute>
+        <attribute type="Detection" />
+    </object>
+    <object id="1" role="Object">
+        <attribute type="Mental">accepting, accepting, accommodating, appreciative, awkward, compassionate, compassionate, confident, confused, courage, excited, fearful, friendly reassured, giving, grateful, happy, surprised, uncomfortable, uncomfortable</attribute>
+        <attribute type="Detection" />
+    </object>
+    <object id="2" role="Settings">
+        <attribute type="Mental" />
+        <attribute type="Detection">arena, arena, arena, outdoor, outdoor, outdoor</attribute>
+    </object>
+    <object id="3" role="Others">
+        <attribute type="Mental" />
+        <attribute type="Detection">adult, adult, adult, carrying, person, person, raising, raising, raising, strangers, strangers, strangers, waving, waving</attribute>
+    </object>
+</annotation>

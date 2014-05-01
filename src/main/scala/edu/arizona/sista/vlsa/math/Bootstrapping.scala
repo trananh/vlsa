@@ -92,9 +92,10 @@ object Bootstrapping {
         |0.438951467
       """.stripMargin.split("\n").map(_.trim()).filterNot(_.isEmpty).map(v => v.toDouble)
 
-    val result = sampleImprovement(baseline, model, 10000, 0.01)
+    val p = 0.01
+    val result = sampleImprovement(baseline, model, 10000, p)
 
-    println("Statistically significant = " + result)
+    println("Statistically significant (p < " + p + ") = " + result)
   }
 
 }

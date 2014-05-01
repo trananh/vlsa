@@ -296,7 +296,7 @@ object NeighborhoodExperiment {
   : VecNeighborhood = {
     val model = VecNeighborhood.createModel(statesDictionary, vecFile)
     model.process(searchTerms)
-    model.vecModel.clear()
+    model.vecModel.get.clear()
     model
   }
 

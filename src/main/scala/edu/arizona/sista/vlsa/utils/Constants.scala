@@ -13,7 +13,7 @@ import scala.Option
 object Constants {
 
   /** Debug flag */
-  val DEBUG = false
+  var DEBUG = false
 
 
   /** Random number generator seed */
@@ -21,7 +21,7 @@ object Constants {
 
 
   /** VLSA project root */
-  val VLSA_ROOT = System.getProperty("user.dir")
+  val VLSA_ROOT = System.getProperty("user.dir") + "/research/src/main/scala/edu/arizona/sista/vlsa"
 
 
   /** Load configuration properties if file exists */

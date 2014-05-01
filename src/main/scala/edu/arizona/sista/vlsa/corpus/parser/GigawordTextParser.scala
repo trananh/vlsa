@@ -43,7 +43,7 @@ class GigawordTextParser(val corpusDir: File) extends CorpusParser {
   private var nextDocument: Option[corpus.Document] = fetchNextDocument()
 
   /** Name of the corpus. */
-  override def corpusName = "English Gigaword Corpus"
+  this.corpusName = "English Gigaword Corpus"
   
   /** Iterate through all documents in the corpus. */
   def iterator = new Iterator[corpus.Document] {
@@ -187,7 +187,7 @@ class GigawordTextParser(val corpusDir: File) extends CorpusParser {
     * @return New string with no escape characters.
     */
   private def removeEscapes(line: String): String = {
-    line.replaceAll("&(amp|AMP);", "&").replaceAll("&(lt|LG);", "<").replaceAll("&(gt|GT);", ">")
+    line.replaceAll("&(amp|AMP);", "&").replaceAll("&(lt|LT);", "<").replaceAll("&(gt|GT);", ">")
   }
   
 }

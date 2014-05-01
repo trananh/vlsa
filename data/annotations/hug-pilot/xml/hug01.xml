@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<annotation id="hug01" activity="hug" source="MTurk">
+    <object id="0" role="Subject">
+        <attribute type="Mental">anxious, appropriate, aware, confident, content, excited, excited, friendly, glad, glad, happy, happy, happy, happy, happy, happy, happy, inviting, inviting, loved, nervous, open, pleased, positive, professional, surprised, uncertain, warm, welcoming, welcoming, welcoming</attribute>
+        <attribute type="Detection" />
+    </object>
+    <object id="1" role="Object">
+        <attribute type="Mental">accepting, aware, calm, confident, enthusiastic, excited, excited, familiar, friendly, giving, glad, happy, happy, happy, happy, happy, happy, inviting, joyful, nice, open, pleased, prepared, professional, ready, receptive, smug, warm, welcoming</attribute>
+        <attribute type="Detection" />
+    </object>
+    <object id="2" role="Settings">
+        <attribute type="Mental" />
+        <attribute type="Detection">indoor, indoor, industrial</attribute>
+    </object>
+    <object id="3" role="Others">
+        <attribute type="Mental" />
+        <attribute type="Detection">acquaintances, acquaintances, acquaintances, adult, adult, adult, carrying, carrying, carrying, chair, chair, chair, friends, friends, hug-multi, hug-multi, hug-multi, person, person, put-down, put-down, put-down, raising, sofa, sofa, table, table, table, walking, walking</attribute>
+    </object>
+</annotation>

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<annotation id="hug26" activity="hug" source="MTurk">
+    <object id="0" role="Subject">
+        <attribute type="Mental">affectionate, appreciative, belonging, calm, confident, content, enthusiastic, happy, happy, happy, happy, interested, loved, loved, loved, passionate, satisfied, satisfied, successful, unknown</attribute>
+        <attribute type="Detection" />
+    </object>
+    <object id="1" role="Object">
+        <attribute type="Mental">belonging, caring, compassionate, content, detached, happy, happy, happy, happy, intimate, loved, loved, loved, loved, loved, peaceful, skeptical, thoughtful, trusting, unknown</attribute>
+        <attribute type="Detection" />
+    </object>
+    <object id="2" role="Settings">
+        <attribute type="Mental" />
+        <attribute type="Detection">beach, outdoor, outdoor, street, suburb</attribute>
+    </object>
+    <object id="3" role="Others">
+        <attribute type="Mental" />
+        <attribute type="Detection">acquaintances, adult, adult, adult, car, car, car, friends, hug-multi, hug-multi, lovers, person, person, raising, tree, tree, walking</attribute>
+    </object>
+</annotation>

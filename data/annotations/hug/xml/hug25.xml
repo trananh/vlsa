@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<annotation id="hug25" activity="hug" source="MTurk">
+    <object id="0" role="Subject">
+        <attribute type="Mental">desperate, emotional, emotional, excited, fearful, happy, happy, happy, happy, hopeful, joyful, loved, loved, loved, regretful, rejoiced, relieved, relieved, sad, tearful, trusting</attribute>
+        <attribute type="Detection" />
+    </object>
+    <object id="1" role="Object">
+        <attribute type="Mental">awkward, confused, confused, confused, confused, confused, contemplative, doubtful, happy, indifference, interpretative, shocked, shocked, stunned, surprised, surprised, unhappy</attribute>
+        <attribute type="Detection" />
+    </object>
+    <object id="2" role="Settings">
+        <attribute type="Mental" />
+        <attribute type="Detection">alley, outdoor, outdoor, outdoor, street, street, street, suburb</attribute>
+    </object>
+    <object id="3" role="Others">
+        <attribute type="Mental" />
+        <attribute type="Detection">acquaintances, acquaintances, adult, adult, friends, jumping, lovers, lovers, person, person, raising, raising, raising, running, running, running</attribute>
+    </object>
+</annotation>

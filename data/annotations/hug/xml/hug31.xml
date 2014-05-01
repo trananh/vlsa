@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<annotation id="hug31" activity="hug" source="MTurk">
+    <object id="0" role="Subject">
+        <attribute type="Mental">appreciative, caring, caring, compassionate, grateful, happy, happy, hopeful, humble, kind, longing, loved, loved, loved, loved, loved, needy, passionate, reassuring, sad, sad, sad, sympathetic, touched, warm, wondrous, worried</attribute>
+        <attribute type="Detection" />
+    </object>
+    <object id="1" role="Object">
+        <attribute type="Mental">affectionate, apprehensive, attentive, belonging, caring, compassionate, grateful, grateful, grateful, grateful, happy, happy, happy, happy, hopeful, longing, loved, loved, loved, loved, loved, loved, loved, obedient, protected, sad, sad</attribute>
+        <attribute type="Detection" />
+    </object>
+    <object id="2" role="Settings">
+        <attribute type="Mental" />
+        <attribute type="Detection">home, home, home, indoor, indoor, living-room, living-room, living-room, suburb</attribute>
+    </object>
+    <object id="3" role="Others">
+        <attribute type="Mental" />
+        <attribute type="Detection">adult, adult, adult, carrying, carrying, chair, chair, chair, child, child, child, hug-multi, hug-multi, parent-child, parent-child, parent-child, person, person, person, put-down, put-down, put-down, raising, raising, raising, sofa, walking, walking</attribute>
+    </object>
+</annotation>

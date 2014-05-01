@@ -12,6 +12,9 @@ object Stats {
   /** Epsilon for double value comparison */
   val DoubleEpsilon = 1E-7
 
+  /** Log base 2 */
+  def log2(x: Double) = scala.math.log(x) / scala.math.log(2)
+
   /** Builds a new collection by applying a function to all successive sublists of the
     * original list and using the elements of the resulting collections (similar to List.flatMap).
     *
@@ -86,6 +89,49 @@ object Stats {
   def normalizeScores(scores: List[(String, Double)]): List[(String, Double)] = {
     val sum = scores.map(_._2).sum
     scores.map(e => (e._1, e._2 / sum))
+  }
+
+  /** Compute the Shanon Entropy for a probability distribution (using log2).
+    * @param probs The probability distribution.
+    * @return The Shanon Entropy entropy of the probability distribution.
+    */
+  def entropy(probs: Iterable[Double]): Double = {
+    -1 * probs.filter(_ > 0.0).map(p => p * log2(p)).sum
+  }
+
+  /** Compute the Shanon Entropy for a list of (word, frequency) pairs (using log2).
+    * @param frequencies The list of (word, frequency) pairs.
+    * @return The Shanon Entropy entropy for the list of (word, frequency) pairs.
+    */
+  def entropy(frequencies: List[(String, Int)]): Double = {
+    val norm = normalizeScores(frequencies.map(t => (t._1, t._2.toDouble)))
+    entropy(norm.map(_._2))
+  }
+
+  /** Compute the mean.
+    * @param values List of values.
+    * @return The mean.
+    */
+  def mean(values: Iterable[Double]): Double = values.sum / values.size
+
+  /** Compute the sample variance.
+    * @param values List of values.
+    * @return The sample variance.
+    */
+  def variance(values: Iterable[Double]): Double = {
+    val vave = mean(values)
+    val SS = values.map(v => math.pow((v - vave), 2)).sum
+    SS / (values.size - 1)
+  }
+
+  /** Compute the population variance.
+    * @param values List of values.
+    * @return The population variance.
+    */
+  def pvariance(values: Iterable[Double]): Double = {
+    val vave = mean(values)
+    val SS = values.map(v => math.pow((v - vave), 2)).sum
+    SS / values.size
   }
 
 }

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<annotation id="hug39" activity="hug" source="MTurk">
+    <object id="0" role="Subject">
+        <attribute type="Mental">care, caring, caring, comforting, comforting, compassionate, compassionate, compassionate, compassionate, consoling, empathetic, humbled, motherly, nice, protective, reassuring, sad, sympathetic, trusting, worried, worried</attribute>
+        <attribute type="Detection" />
+    </object>
+    <object id="1" role="Object">
+        <attribute type="Mental">ashamed, crying, devastated, disappointed, disappointed, failure, hurt, insecure, nervous, sad, sad, sad, sad, sad, sad, stressed, upset, upset, upset, upset, upset, upset, worried</attribute>
+        <attribute type="Detection" />
+    </object>
+    <object id="2" role="Settings">
+        <attribute type="Mental" />
+        <attribute type="Detection">arena, arena, indoor, indoor, indoor</attribute>
+    </object>
+    <object id="3" role="Others">
+        <attribute type="Mental" />
+        <attribute type="Detection">acquaintances, adult, adult, adult, chair, chair, chair, hug-multi, hug-multi, person, person, person, raising, raising, strangers, strangers, table, table, table, walking, walking, walking, waving</attribute>
+    </object>
+</annotation>

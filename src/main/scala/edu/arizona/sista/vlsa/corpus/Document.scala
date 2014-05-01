@@ -4,11 +4,13 @@ import edu.arizona.sista.processors
 import edu.arizona.sista.processors.DocumentSerializer
 import edu.arizona.sista.processors.corenlp.CoreNLPProcessor
 import edu.arizona.sista.vlsa.utils.PrinterUtils
+import java.io.File
 import org.apache.lucene
 import org.apache.lucene.document.{StoredField, StringField, Field, FieldType}
 import org.apache.lucene.index.FieldInfo.IndexOptions
 import org.apache.lucene.index.IndexableField
 import scala.collection.mutable
+import scala.xml.XML
 
 /** A simple abstraction of a document that came from some corpus.
   *
@@ -20,8 +22,8 @@ import scala.collection.mutable
   * @author trananh
   */
 class Document(
-    val text: String,
-    val corpus: String = "",
+    var text: String,
+    var corpus: String = "",
     var attributes: mutable.Map[String, Any] = mutable.Map.empty[String, Any]) {
 
   /** Process the document through the Stanford CoreNLP toolbox.
@@ -50,13 +52,17 @@ class Document(
     // Add corpus name (indexed, but not tokenized)
     doc.add(new StringField("corpus", this.corpus, Field.Store.YES))
 
-    // Add the attributes (stored, but not indexed or analyzed)
+    // Add the attributes (stored, but not indexed or analyzed (note: "id" is also indexed")).
     // We'll only store string fields for now.
     var hasNLP = false
     for ((k, v) <- attributes) {
       v match {
-        case v: String =>
-          doc.add(new StoredField(k, v))
+        case v: String => {
+          if (k.equalsIgnoreCase("id"))
+            doc.add(new StringField(k, v, Field.Store.YES))
+          else
+            doc.add(new StoredField(k, v))
+        }
         case v: processors.Document => {
           hasNLP = true
           doc.add(new StoredField(k, Document.nlpDocSerializer.save(doc = v)))
@@ -81,6 +87,31 @@ class Document(
     doc.add(new Field("text", this.text, fType))
 
     doc
+  }
+
+  /** Convert the document to XMl format.
+    * @return The document in XML format.
+    */
+  def toXML: String = {
+    val sb = new StringBuilder()
+    sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n")
+    sb.append("<DOC>\n")
+    if (corpus.length > 0)
+      sb.append("<attribute type=\"corpus\">\n" + PrinterUtils.escapeXML(corpus) + "\n</attribute>\n")
+    for ((k, v) <- attributes) {
+      v match {
+        case v: String => {
+          sb.append("<attribute type=\"" + PrinterUtils.escapeXML(k) + "\">\n")
+          sb.append(PrinterUtils.escapeXML(v) + "\n")
+          sb.append("</attribute>\n")
+        }
+        case _ => null
+      }
+    }
+    if (text.length > 0)
+      sb.append("<attribute type=\"text\">\n" + PrinterUtils.escapeXML(text) + "\n</attribute>\n")
+    sb.append("</DOC>\n")
+    sb.toString()
   }
 
   /** Return a string description of the document. */
@@ -109,7 +140,7 @@ object Document {
   private val nlpDocSerializer = new DocumentSerializer()
 
   /** Processor for CoreNLP */
-  private val nlpProcessor = new CoreNLPProcessor()
+  private val nlpProcessor = new CoreNLPProcessor(internStrings = false)
 
   /** Create a new corpus document from the queried lucene document.
     * @param doc A Lucene document.
@@ -142,6 +173,40 @@ object Document {
     }
 
     new Document(text, corpus, attributes)
+  }
+
+  /** Create a new document from the XML string.
+    * @param xmlString The XML string.
+    */
+  def fromXML(xmlString: String): Document = {
+    val xml = XML.loadString(xmlString)
+    val attributes: mutable.Map[String, Any] = new mutable.HashMap[String, Any]()
+    (xml \ "attribute").foreach(tag => {
+      attributes.put(PrinterUtils.unescapeXML((tag \ "@type").text), PrinterUtils.unescapeXML(tag.text.trim))
+    })
+
+    var text = ""
+    if (attributes.contains("text")) {
+      text = attributes.remove("text").get.asInstanceOf[String]
+    }
+
+    var corpus = ""
+    if (attributes.contains("corpus")) {
+      corpus = attributes.remove("corpus").get.asInstanceOf[String]
+    }
+
+    new Document(text, corpus, attributes)
+  }
+
+  /** Simple demo application. */
+  def main(args: Array[String]) {
+    val xmlFile = new File("../vlsa/out/AFP_ENG_20020206.0744.txt")
+    val source = scala.io.Source.fromFile(xmlFile)
+    val xmlString = source.mkString
+    source.close()
+
+    val doc = Document.fromXML(xmlString)
+    println(doc.toString)
   }
 
 }

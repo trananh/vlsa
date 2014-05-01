@@ -146,6 +146,7 @@ object RunLuceneIndexer {
     var parser: Option[CorpusParser] = None
     corpus.toLowerCase match {
       case "gigaword" => parser = Option(new GigawordTextParser(corpusDir))
+      case _ => throw new Exception("Unrecognized corpus!")
     }
 
     // Index corpus

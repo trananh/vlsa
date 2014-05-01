@@ -9,6 +9,11 @@ import edu.arizona.sista.processors.struct.DirectedGraphEdgeIterator
   */
 object PrinterUtils {
 
+  /** Print details of an NLP parsed document.
+    *
+    * @param doc An NLP parsed document.
+    * @return String detailing the parsed document.
+    */
   def printNLPDoc(doc: processors.Document): String = {
     val sb = new StringBuilder()
 
@@ -62,5 +67,27 @@ object PrinterUtils {
 
     sb.toString()
   }
-  
+
+
+
+  /** Unescape special XML characters:
+    *   &amp; -> &
+    *   &lt;  -> <
+    *   &gt;  -> >
+    * @return New string with no escaped characters.
+    */
+  def unescapeXML(line: String): String = {
+    line.replaceAll("&(amp|AMP);", "&").replaceAll("&(lt|LT);", "<").replaceAll("&(gt|GT);", ">")
+  }
+
+  /** Escape special XML characters:
+    *   & -> &amp;
+    *   < -> &lt;
+    *   > -> &gt;
+    * @return New string with with special characters removed.
+    */
+  def escapeXML(line: String): String = {
+    line.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")
+  }
+
 }

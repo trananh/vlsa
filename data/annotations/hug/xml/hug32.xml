@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<annotation id="hug32" activity="hug" source="MTurk">
+    <object id="0" role="Subject">
+        <attribute type="Mental">ecstatic, ecstatic, ecstatic, elated, emotional, excited, excited, excited, excited, genuine, happy, happy, happy, happy, happy, happy, happy, joyful, joyful, overjoyed, overjoyed, overjoyed, overjoyed, overwhelmed, rough, shocked, surprised, thrilled, trusting</attribute>
+        <attribute type="Detection" />
+    </object>
+    <object id="1" role="Object">
+        <attribute type="Mental">confused, excited, happy, happy, hopeful, joyful, overjoyed, patient, pleased, surprised, surprised, surprised, surprised, surprised, surprised, trusting</attribute>
+        <attribute type="Detection" />
+    </object>
+    <object id="2" role="Settings">
+        <attribute type="Mental" />
+        <attribute type="Detection">home, home, home, indoor, indoor, indoor, kitchen, kitchen, kitchen, suburb, suburb</attribute>
+    </object>
+    <object id="3" role="Others">
+        <attribute type="Mental" />
+        <attribute type="Detection">adult, adult, adult, bag, carrying, chair, chair, chair, child, clapping, friends, hug-multi, jumping, parent-child, parent-child, parent-child, person, person, person, pick-up, put-down, raising, raising, running, table, table, table, walking, waving</attribute>
+    </object>
+</annotation>

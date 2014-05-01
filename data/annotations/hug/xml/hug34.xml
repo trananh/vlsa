@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<annotation id="hug34" activity="hug" source="MTurk">
+    <object id="0" role="Subject">
+        <attribute type="Mental">aggressive, aggressive, assertive, bothering, controlling, determined happy, ecstatic, empowered, excitable, fighting, forgive, happy, happy, happy, hyperactive, interactive, laughable, loved, loved, making fun, overzealous, playful, smiling</attribute>
+        <attribute type="Detection" />
+    </object>
+    <object id="1" role="Object">
+        <attribute type="Mental">aggressive, angry, angry, angry, annoyed, anxious, bothered, childish, claustrophobic, crying, fearful, fearful, fighting, frustrated, frustrated, frustrated, frustrated, helpless, mad, nervous, painful, sad, scared, timid, uncomfortable, unhappy, upset, upset, upset, upset, upset, worried</attribute>
+        <attribute type="Detection" />
+    </object>
+    <object id="2" role="Settings">
+        <attribute type="Mental" />
+        <attribute type="Detection">home, home, home, indoor, indoor, indoor, living-room</attribute>
+    </object>
+    <object id="3" role="Others">
+        <attribute type="Mental" />
+        <attribute type="Detection">carrying, carrying, chair, child, child, child, fall, fall, hug-multi, hug-multi, jogging, jumping, kicking, person, person, put-down, put-down, raising, raising, raising, siblings, siblings, siblings, sofa, sofa, truck, walking, walking</attribute>
+    </object>
+</annotation>

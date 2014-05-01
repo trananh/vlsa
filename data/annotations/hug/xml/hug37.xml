@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<annotation id="hug37" activity="hug" source="MTurk">
+    <object id="0" role="Subject">
+        <attribute type="Mental">amused, caring, excited, forced, fun, fun, happy, happy, happy, hyper, hyper, innocent, interested, loved, loved, neutral, obnoxious, overbearing, overzealous, playful, silly, silly, silly, sweet, trusting</attribute>
+        <attribute type="Detection" />
+    </object>
+    <object id="1" role="Object">
+        <attribute type="Mental">anticipative, anxious, caring, coerced, confused, forced, fun, fun, happy, happy, happy, hesitant, hyper, innocent, loved, loved, mischievous, nervous, obnoxious, planned, scared, silly, silly, silly, sweet, timid, worried</attribute>
+        <attribute type="Detection" />
+    </object>
+    <object id="2" role="Settings">
+        <attribute type="Mental" />
+        <attribute type="Detection">backyard, backyard, outdoor, outdoor, outdoor</attribute>
+    </object>
+    <object id="3" role="Others">
+        <attribute type="Mental" />
+        <attribute type="Detection">chair, child, child, child, clapping, fall, fall, friends, hug-multi, hug-multi, person, person, person, siblings, table, tree, tree</attribute>
+    </object>
+</annotation>
