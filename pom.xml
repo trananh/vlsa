@@ -7,7 +7,7 @@
     <groupId>edu.arizona.sista</groupId>
     <artifactId>vlsa</artifactId>
     <packaging>pom</packaging>
-    <version>1.0.0</version>
+    <version>1.0.1</version>
     <name>Video Latent Scene Attributes System</name>
     <url>https://github.com/trananh/vlsa</url>
 
