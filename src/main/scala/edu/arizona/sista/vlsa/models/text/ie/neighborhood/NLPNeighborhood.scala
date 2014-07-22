@@ -349,21 +349,21 @@ class NLPNeighborhood extends CorefNeighborhood {
     frequency
   }
 
-  /** Compute the joint frequency counts for each activity-actor pair in combination with each
-    * of the mental state.
+  /** Compute the joint frequency counts for each (activity, arg1) pair in combination with each
+    * of the mental state, where arg1 could be a list of actors, locations, etc..
     *
     * @param nlpDir Directory containing cached NLP annotations.
     * @param swirlDir Optional directory containing cached SwiRL annotations (default to None).
     * @param activity The activity.
-    * @param actors The set of possible actors.
+    * @param arg1 The set of possible terms for arg1 (e.g., all actors or locations).
     * @param frequencyDir The frequency output directory for storing frequency counts.
     * @param targetPOSLabels The target labels of the mental states.
-    * @param mode Specifies which actor(s) to process mental states for
+    * @param mode Specifies which actor(s) in the activity to process mental states for
     *             (defaults to ActorMode.All, which means process mental states for all actors).
     * @param overwrite Overwrite all previously cached frequencies if True.
     */
-  def computeNLPStatesFrequencyAA(nlpDir: File, swirlDir: Option[File] = None, activity: (String, Option[Set[String]]),
-                                  actors: List[(String, Option[Set[String]])], frequencyDir: String,
+  def computeNLPStatesFrequencyA1(nlpDir: File, swirlDir: Option[File] = None, activity: (String, Option[Set[String]]),
+                                  arg1: List[(String, Option[Set[String]])], frequencyDir: String,
                                   targetPOSLabels: Set[String] = NLPUtils.POS_JJs.union(NLPUtils.POS_VBs),
                                   mode: ActorMode = ActorMode.All,
                                   overwrite: Boolean = false) {
@@ -379,17 +379,17 @@ class NLPNeighborhood extends CorefNeighborhood {
     // List of mental states
     val mentalStates = dictionary.getAllTokens().toList.map(_(0))
 
-    // Iterate over each possible actor
+    // Iterate over each possible arg1
     var searchTerms: List[(String, Option[Set[String]])] = null
-    for (i <- -1 until actors.length) {
-      // For each actor combination, let's reset the dictionary.
+    for (i <- -1 until arg1.length) {
+      // For each (activity, arg1) combination, let's reset the dictionary.
       dictionary.reset()
 
       // Create a map of search terms
       if (i == -1) {
         searchTerms = List((activity._1.toLowerCase, activity._2))
       } else {
-        searchTerms = List((activity._1.toLowerCase, activity._2)) ::: List((actors(i)._1.toLowerCase, actors(i)._2))
+        searchTerms = List((activity._1.toLowerCase, activity._2)) ::: List((arg1(i)._1.toLowerCase, arg1(i)._2))
       }
 
       // Skip this entire process if we already have the frequency counts for this particular search
@@ -443,27 +443,27 @@ class NLPNeighborhood extends CorefNeighborhood {
 
       } // end if for running a frequency-counting process for a particular search-context
 
-    } // end for loop over each actor
+    } // end for loop over each arg1
 
   }
 
-  /** Compute the joint frequency counts for each activity-actor-location triplet in combination with each
-    * of the mental state.
+  /** Compute the joint frequency counts for each (activity, arg1, arg2) triplet in combination with each
+    * of the mental state. For example, each (activity, actor, location) query tuple.
     *
     * @param nlpDir Directory containing cached NLP annotations.
     * @param swirlDir Optional directory containing cached SwiRL annotations (default to None).
     * @param activity The activity.
-    * @param actors The set of possible actors.
-    * @param locations The set of possible locations.
+    * @param arg1 The set of possible terms for arg1 (e.g., all actors or locations).
+    * @param arg2 The set of possible terms for arg2 (e.g., all actors or locations).
     * @param frequencyDir The frequency output directory for storing frequency counts.
     * @param targetPOSLabels The target labels of the mental states.
-    * @param mode Specifies which actor(s) to process mental states for
+    * @param mode Specifies which actor(s) in the activity to process mental states for
     *             (defaults to ActorMode.All, which means process mental states for all actors).
     * @param overwrite Overwrite all previously cached frequencies if True.
     */
-  def computeNLPStatesFrequencyAAL(nlpDir: File, swirlDir: Option[File] = None, activity: (String, Option[Set[String]]),
-                                   actors: List[(String, Option[Set[String]])],
-                                   locations: List[(String, Option[Set[String]])], frequencyDir: String,
+  def computeNLPStatesFrequencyA2(nlpDir: File, swirlDir: Option[File] = None, activity: (String, Option[Set[String]]),
+                                   arg1: List[(String, Option[Set[String]])],
+                                   arg2: List[(String, Option[Set[String]])], frequencyDir: String,
                                    targetPOSLabels: Set[String] = NLPUtils.POS_JJs.union(NLPUtils.POS_VBs),
                                    mode: ActorMode = ActorMode.All,
                                    overwrite: Boolean = false) {
@@ -476,24 +476,31 @@ class NLPNeighborhood extends CorefNeighborhood {
       writer.close()
     }
 
+    /** First compute frequency for all (activity, arg1) and (activity, arg2) combinations. */
+    computeNLPStatesFrequencyA1(nlpDir, swirlDir, activity, arg1, frequencyDir, targetPOSLabels, mode, overwrite)
+    computeNLPStatesFrequencyA1(nlpDir, swirlDir, activity, arg2, frequencyDir, targetPOSLabels, mode, overwrite)
+
+
+    /** Now compute frequency for all (activity, arg1, arg2) combinations */
+
     // List of mental states
     val mentalStates = dictionary.getAllTokens().toList.map(_(0))
 
     // The search terms
     var searchTerms: List[(String, Option[Set[String]])] = null
 
-    // Iterate over each possible actor
-    for (aIdx <- 0 until actors.length) {
+    // Iterate over each possible arg1
+    for (a1Idx <- 0 until arg1.length) {
 
-      // Iterate over each location
-      for (lIdx <- 0 until locations.length) {
+      // Iterate over each arg2
+      for (a2Idx <- 0 until arg2.length) {
 
-        // For each actor-location combination, let's reset the dictionary.
+        // For each (activity, arg1, arg2) combination, let's reset the dictionary.
         dictionary.reset()
 
-        // Create a list of search terms following the AAL pattern
-        searchTerms = List((activity._1.toLowerCase, activity._2), (actors(aIdx)._1.toLowerCase, actors(aIdx)._2),
-          (locations(lIdx)._1.toLowerCase, locations(lIdx)._2))
+        // Create a list of search terms following the (activity, arg1, arg2) pattern
+        searchTerms = List((activity._1.toLowerCase, activity._2), (arg1(a1Idx)._1.toLowerCase, arg1(a1Idx)._2),
+          (arg2(a2Idx)._1.toLowerCase, arg2(a2Idx)._2))
 
         // Skip this entire process if we already have the frequency counts for this particular search
         var shouldRun = false
@@ -546,114 +553,9 @@ class NLPNeighborhood extends CorefNeighborhood {
 
         } // end if for running a frequency-counting process for a particular search-context
 
-      } // end for loop for each location
+      } // end for loop for each arg2
 
-    } // end for loop over each actor
-
-  }
-
-  /** Compute the joint frequency counts for each activity-actor-relationship triplet in combination with each
-    * of the mental state.
-    *
-    * @param nlpDir Directory containing cached NLP annotations.
-    * @param swirlDir Optional directory containing cached SwiRL annotations (default to None).
-    * @param activity The activity.
-    * @param actors The set of possible actors.
-    * @param relationships The set of possible relationships.
-    * @param frequencyDir The frequency output directory for storing frequency counts.
-    * @param targetPOSLabels The target labels of the mental states.
-    * @param mode Specifies which actor(s) to process mental states for
-    *             (defaults to ActorMode.All, which means process mental states for all actors).
-    * @param overwrite Overwrite all previously cached frequencies if True.
-    */
-  def computeNLPStatesFrequencyAAR(nlpDir: File, swirlDir: Option[File] = None, activity: (String, Option[Set[String]]),
-                                   actors: List[(String, Option[Set[String]])],
-                                   relationships: List[(String, Option[Set[String]])], frequencyDir: String,
-                                   targetPOSLabels: Set[String] = NLPUtils.POS_JJs.union(NLPUtils.POS_VBs),
-                                   mode: ActorMode = ActorMode.All,
-                                   overwrite: Boolean = false) {
-
-    /** Helper function to write the frequency to file */
-    def saveFrequency(searchTerms: List[String], freq: Long) {
-      val file = new File(frequencyDir + "/" + searchTerms.map(_.toLowerCase.trim).sorted.mkString("-") + ".txt")
-      val writer = new java.io.FileWriter(file)
-      writer.write(freq + "\n")
-      writer.close()
-    }
-
-    // List of mental states
-    val mentalStates = dictionary.getAllTokens().toList.map(_(0))
-
-    // The search terms
-    var searchTerms: List[(String, Option[Set[String]])] = null
-
-    // Iterate over each possible actor
-    for (aIdx <- 0 until actors.length) {
-
-      // Iterate over each relationship
-      for (rIdx <- 0 until relationships.length) {
-
-        // For each actor-relationship combination, let's reset the dictionary.
-        dictionary.reset()
-
-        // Create a list of search terms following the AAR pattern
-        searchTerms = List((activity._1.toLowerCase, activity._2), (actors(aIdx)._1.toLowerCase, actors(aIdx)._2),
-          (relationships(rIdx)._1.toLowerCase, relationships(rIdx)._2))
-
-        // Skip this entire process if we already have the frequency counts for this particular search
-        var shouldRun = false
-        if (overwrite)
-          shouldRun = true
-        else {
-          breakable {
-            mentalStates.foreach(state => {
-              val terms = searchTerms.map(_._1) ::: List(state)
-              val file = new File(frequencyDir + "/" + terms.map(_.toLowerCase.trim).sorted.mkString("-") + ".txt")
-              if (!file.exists()) {
-                shouldRun = true
-                break()
-              }
-            })
-          }
-          if (!shouldRun) {
-            val file = new File(frequencyDir + "/" + searchTerms.map(_._1.toLowerCase.trim).sorted.mkString("-") + ".txt")
-            if (searchTerms.size > 1 && !file.exists()) {
-              shouldRun = true
-            }
-          }
-        }
-
-        // Only run the frequency counting process (which is very expensive) if we must
-        if (shouldRun) {
-
-          // Process highlights
-          val f = processWithTermsPOS(activity = searchTerms.head, searchTerms.slice(1, searchTerms.length),
-            nlpDir = nlpDir, swirlDir = swirlDir, targetPOSLabels, mode)
-
-          // Now dump out the dictionary frequency and save them.
-          val freqResults = dictionary.freq(0).map(entry => (entry._1(0), entry._2.toLong))
-          println("Search terms: " + searchTerms.map(_._1).mkString(" "))
-          println("Search freqs: " + f)
-          println(freqResults.mkString(" "))
-          freqResults.foreach(state => {
-            val terms = searchTerms.map(_._1) ::: List(state._1)
-            val file = new File(frequencyDir + "/" + terms.map(_.toLowerCase.trim).sorted.mkString("-") + ".txt")
-            if (overwrite || !file.exists()) {
-              saveFrequency(terms, state._2)
-            }
-          })
-
-          // Also dump the frequency count of the search context
-          val file = new File(frequencyDir + "/" + searchTerms.map(_._1.toLowerCase.trim).sorted.mkString("-") + ".txt")
-          if (searchTerms.size > 1 && (overwrite || !file.exists())) {
-            saveFrequency(searchTerms.map(_._1), f)
-          }
-
-        } // end if for running a frequency-counting process for a particular search-context
-
-      } // end for loop for each relationship
-
-    } // end for loop over each actor
+    } // end for loop over each arg1
 
   }
 
@@ -701,37 +603,38 @@ object RunNLPComputeJointFrequency {
      */
 
     // Initialize some file locations needed for the model
-    val act = "hug"
-    val mentalStatesFile = "/Volumes/MyPassport/data/text/dictionaries/mental-states/states-adjectives.txt"
-    val nlpDir = new File("/Volumes/MyPassport/data/text/corpora/Gigaword-" + act + "-nlp")
+    val act = "chase"
+    val mentalStatesFile = "/media/MyPassport/data/text/dictionaries/mental-states/states-adjectives.txt"
+    val nlpDir = new File("/media/MyPassport/data/text/corpora/Gigaword-" + act + "-nlp")
     val swirlDir = None
-    val frequencyDir = "/Volumes/MyPassport/data/vlsa/neighborhood/" + act + "/frequency/nlp"
+    val frequencyDir = "/media/MyPassport/data/vlsa/neighborhood/" + act + "/frequency/nlp-aal"
     val targetPOSLabels = NLPUtils.POS_JJs.union(NLPUtils.POS_VBs)
     val mode = ActorMode.All
 
     // Location of annotations
-    val annotationDir = "/Volumes/MyPassport/data/annotations/" + act + "/xml/"
-    val annotationSet = (1 to 45).map(annotationDir + act + "%02d".format(_) + ".xml")
+    val annotationDir = "/media/MyPassport/data/annotations/" + act + "/xml/"
+    val annotationSet = (1 to 26).map(annotationDir + act + "%02d".format(_) + ".xml")
 
     // Load annotation to create queries
-    val queries = new ListBuffer[(String, String)]()
+    val queries = new ListBuffer[(String, String, String)]()
     annotationSet.foreach(annotationFile => {
       // Create a Word Neighborhood Model to generate queries
       val wnm = new WordNeighborhood(act, "")
       wnm.loadDetections(annotationFile)
-      queries.appendAll(wnm.formulateQueriesAA())
+      queries.appendAll(wnm.formulateQueriesAAL())
     })
     val queriesWithPOS = queries.map(q => {
-      List((q._1, Option(NLPUtils.POS_VBs)), (q._2, Option(NLPUtils.POS_NNs)))
+      List((q._1, Option(NLPUtils.POS_VBs)), (q._2, Option(NLPUtils.POS_NNs)), (q._3, Option(NLPUtils.POS_NNs)))
     }).toArray
 
     // Separate out the queries into activity and a set of actors
     val activity = queriesWithPOS.head(0)
     val actors = queriesWithPOS.map(q => q(1)).toSet.toList
+    val locations = queriesWithPOS.map(q => q(2)).toSet.toList
 
     // Compute frequency
     val model = NLPNeighborhood.createModel(mentalStatesFile)
-    model.computeNLPStatesFrequencyAA(nlpDir, swirlDir, activity, actors,
+    model.computeNLPStatesFrequencyA2(nlpDir, swirlDir, activity, actors, locations,
       frequencyDir, targetPOSLabels, mode, overwrite = false)
 
   }

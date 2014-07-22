@@ -1,6 +1,6 @@
 package edu.arizona.sista.vlsa.models.evaluation
 
-import edu.arizona.sista.vlsa.math.{Stats, Metrics, VectorMath}
+import edu.arizona.sista.vlsa.math.{Metrics, Stats, VectorMath}
 import edu.arizona.sista.vlsa.models.data.VideoAnnotation
 import edu.arizona.sista.vlsa.models.data.VideoAnnotation.Roles
 import edu.arizona.sista.vlsa.models.data.VideoAnnotation.Roles.Roles
@@ -12,7 +12,7 @@ import edu.arizona.sista.vlsa.utils.NLPUtils
 import edu.cmu.lti.lexical_db.NictWordNet
 import edu.cmu.lti.ws4j.impl._
 import edu.cmu.lti.ws4j.util.WS4JConfiguration
-import scala.Array
+
 import scala.collection.mutable.ListBuffer
 
 /** Evaluation methods.
@@ -157,8 +157,8 @@ class Evaluation(var groundTruthData: String, var roles: Set[Roles] = Set(Roles.
 
     scores
   }
-  
-  
+
+
   /** Compute the KL-divergence from the ground-truth distribution to the given distribution.
     * @param response Probability distribution over states as a set of (state, value) pairs.
     * @return The KL-divergence, denoted as DKL(gold || response).
@@ -433,12 +433,12 @@ class Evaluation(var groundTruthData: String, var roles: Set[Roles] = Set(Roles.
     val goldMass = goldMatches.map(rList => rList.map(rIdx => response(rIdx)._2).sum)
     for (i <- 0 until resSim.size) {
       if (math.abs(resSim(i)) < Stats.DoubleEpsilon) {
-        resMass(i) = 0.
+        resMass(i) = 0.0
       }
     }
     for (i <- 0 until goldSim.size) {
       if (math.abs(goldSim(i)) < Stats.DoubleEpsilon) {
-        goldMass(i) = 0.
+        goldMass(i) = 0.0
       }
     }
 
@@ -556,7 +556,7 @@ class Evaluation(var groundTruthData: String, var roles: Set[Roles] = Set(Roles.
     CWSAF1(res, gold, scores, uniformExperiment)
   }
 
-  /** Compute the vector distributional distance between a response distribution and a
+  /** Compute the vector distributional similarity between a response distribution and a
     * ground-truth distribution by representing each distribution as a feature vector.
     *
     * Each distribution is converted to a vector by doing a linear combination of the
@@ -567,9 +567,9 @@ class Evaluation(var groundTruthData: String, var roles: Set[Roles] = Set(Roles.
     *
     * @param response The response distribution to compute score for.
     *
-    * @return The vector distributional distance.
+    * @return The vector distributional similarity score as euclidean-distance & cosine-similarity.
     */
-  def vecDistributionalDistance(response: List[(String, Double)]): (Double, Double) = {
+  def vecDistributionalSimilarity(response: List[(String, Double)]): (Double, Double) = {
     if (!vectorsLoaded) throw new Exception("Vectors space not loaded!")
 
     // Find vector representation for the gold scores
@@ -626,6 +626,17 @@ object Evaluation {
   object SimilarityScore extends Enumeration {
     type SimilarityScore = Value
     val HSO, W2V = Value
+  }
+
+  /** Different performance measures:
+    *
+    *  - F1: Classical F1 measure.
+    *  - CWSA-F1: Constrained weighted similarity-aligned F1
+    *
+    */
+  object MeasureType extends Enumeration {
+    type MeasureType = Value
+    val Vec, F1, WSAF1, CWSAF1 = Value
   }
 
   /** Find the average score for a list of F1 scores.

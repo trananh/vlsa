@@ -1,24 +1,25 @@
 package edu.arizona.sista.vlsa.main
 
+import java.io.File
+
+import scala.collection.mutable
+import scala.collection.JavaConversions._
+import scala.collection.mutable.ListBuffer
+
 import com.google.gson.Gson
 import edu.arizona.sista.vlsa.experiments.NeighborhoodExperiment
 import edu.arizona.sista.vlsa.main.WordNeighborhood.ModelTypes
 import edu.arizona.sista.vlsa.main.WordNeighborhood.ModelTypes.ModelTypes
 import edu.arizona.sista.vlsa.math.Stats
+import edu.arizona.sista.vlsa.models.data.{DetectionsAnnotation, VideoAnnotation}
 import edu.arizona.sista.vlsa.models.data.DetectionsAnnotation.DetectionTypes
 import edu.arizona.sista.vlsa.models.data.VideoAnnotation.Roles
-import edu.arizona.sista.vlsa.models.data.{DetectionsAnnotation, VideoAnnotation}
 import edu.arizona.sista.vlsa.models.evaluation.Evaluation
+import edu.arizona.sista.vlsa.models.text.ie.{BackOffLinearInterpolation, DeletedInterpolation, HighlightsDeletedInterpolation, NLPDeletedInterpolation}
+import edu.arizona.sista.vlsa.models.text.ie.neighborhood.{Baseline, DocNeighborhood, VecNeighborhood, WebNeighborhood}
 import edu.arizona.sista.vlsa.models.text.ie.neighborhood.NLPNeighborhood.ActorMode
-import edu.arizona.sista.vlsa.models.text.ie.neighborhood.{WebNeighborhood, VecNeighborhood, DocNeighborhood}
-import edu.arizona.sista.vlsa.models.text.ie.{NLPDeletedInterpolation, HighlightsDeletedInterpolation, BackOffLinearInterpolation, DeletedInterpolation}
 import edu.arizona.sista.vlsa.search.lucene.IndexSearcher
-import edu.arizona.sista.vlsa.search.web.BingSearcher
 import edu.arizona.sista.vlsa.utils.NLPUtils
-import java.io.File
-import scala.collection.JavaConversions._
-import scala.collection.mutable
-import scala.collection.mutable.ListBuffer
 
 /** An information extraction model that makes use of several underlying models, such as the
   * documents-based back-off model, vector-based back-off model, and documents-based deleted
@@ -46,7 +47,7 @@ class WordNeighborhood(var activity: String, val statesDictionary: String,
   var docModel: Option[DocNeighborhood] = None
   var vecModel: Option[VecNeighborhood] = None
   var webModel: Option[WebNeighborhood] = None
-  var baselineModel: Option[WebNeighborhood] = None
+  var baselineModel: Option[Baseline] = None
 
   /** Extra information for each model */
   var docModelDataDir: Option[String] = None
@@ -153,9 +154,8 @@ class WordNeighborhood(var activity: String, val statesDictionary: String,
 
   /** Initialize the baseline model. */
   def initBaseline() {
-    baselineModel = Option(new WebNeighborhood(new BingSearcher()))
-    baselineModel.get.loadAdjectiveDictionary(new File(statesDictionary),
-      defaultScore = WebNeighborhood.DEFAULT_SCORE + 1.0)
+    baselineModel = Option(new Baseline())
+    baselineModel.get.loadAdjectiveDictionary(new File(statesDictionary))
   }
 
   /** Clear the model and free any memory usage. */
@@ -298,6 +298,26 @@ class WordNeighborhood(var activity: String, val statesDictionary: String,
     // Formulate query combinations
     val queries = new ListBuffer[(String, String)]()
     actors.foreach(a => queries.append((activity, a)))
+
+    queries.toArray
+  }
+
+  /** Formulate all combinations of ("activity", "location") tuple query terms
+    * based on found detections.  This is referred to as the AL pattern.
+    *
+    * @return Tuples of query terms following the AL pattern.
+    */
+  def formulateQueriesAL(): Array[(String, String)] = {
+    // Retrieve the detections, for each detection, convert to common word form(s).
+    // For example, "tv" -> "television", "running" -> "run", "running"
+    val locationDetections = new ListBuffer[String]()
+    detections.getDetections(DetectionTypes.Locations).foreach(d =>
+      locationDetections.appendAll(DetectionsAnnotation.getCommonWordForms(d)))
+    val locations = locationDetections.map(e => NLPUtils.lemmatizeTerms(Array(e))(0)).toSet
+
+    // Formulate query combinations
+    val queries = new ListBuffer[(String, String)]()
+    locations.foreach(l => queries.append((activity, l)))
 
     queries.toArray
   }
@@ -585,22 +605,226 @@ class WordNeighborhood(var activity: String, val statesDictionary: String,
 
   }
 
-  /** Process a movie using the baseline model, which outputs all mental states from
+  /** Process a movie using the uniform baseline model, which outputs all mental states from
     * the dictionary as a uniform distribution.
-    *
-    * The detections and mental states should already be loaded before running the
-    * baseline.
-    *
-    * @param eval Evaluation object.
     *
     * @return List of normalized (word, score) pairs that is the mental states distribution.
     */
-  def baseline(eval: Evaluation): List[(String, Double)] = {
+  def unifBaseline(): List[(String, Double)] = {
     initBaseline()
-    val scores = baselineModel.get.getRankedResults(WebNeighborhood.Scoring.Score)
+    baselineModel.get.setScores(1.0)
+    val scores = baselineModel.get.getRankedResults()
     clearBaseline()
     Stats.normalizeScores(scores)
   }
+
+  /** Process a movie using the frequency baseline model, which outputs all mental states from
+    * the dictionary using the frequency distribution from the corpus.
+    *
+    * @return List of normalized (word, score) pairs that is the mental states distribution.
+    */
+  def freqBaseline(cacheDir: String): List[(String, Double)] = {
+    initBaseline()
+    baselineModel.get.loadCachedScores(new File(cacheDir))
+    val scores = baselineModel.get.getRankedResults()
+    clearBaseline()
+    Stats.normalizeScores(scores)
+  }
+
+
+  /** Process vector neighborhood.
+    *
+    * @param eval Evaluation object.
+    * @param queriesWithPOS Query tuples with POS.
+    * @param lambdas Interpolation parameters (e.g. Array(0.25) or Array(0.2, 0.5))
+    * @param vecPrunePct Prune parameter for the vector neighborhood.
+    * @param debugMode Prints out some extra scores for calibrating if True.
+    *
+    * @return List of normalized (word, score) pairs that is the mental state distribution.
+    */
+  def processVec(eval: Evaluation, queriesWithPOS: Array[List[(String, Option[Set[String]])]],
+                 lambdas: Array[Double], vecPrunePct: Double = 0.10,
+                 debugMode: Boolean = false): List[(String, Double)] = {
+
+    println("\nVEC NEIGHBORHOOD (Prune = " + vecPrunePct + ")\n")
+    val vecFile = "/Volumes/MyPassport/data/text/entity-vectors/Gigaword-story/story-vecs.bin"
+    initVecNeighborhood(vecFile)
+    val vecResults = backOffLinearInterpolation(queriesWithPOS, lambdas, ModelTypes.Vector)
+    clearVecNeighborhood()
+
+    if (debugMode) {
+      println("\nVec results:")
+      println(vecResults.mkString(", "))
+      println(vecResults.sortWith(_._2 > _._2).mkString(", "))
+      NeighborhoodExperiment.estimateCWSAF1Params(vecResults, eval)
+    }
+
+    Stats.normalizeScores(pruneByProbMass(vecResults, vecPrunePct))
+  }
+
+
+  /** Process doc neighborhood (doc + backoff-linear interpolation).
+    *
+    * @param eval Evaluation object.
+    * @param queriesWithPOS Query tuples with POS.
+    * @param lambdas Interpolation parameters (e.g. Array(0.25) or Array(0.2, 0.5))
+    * @param docPrunePct Prune parameter for the doc neighborhood.
+    * @param debugMode Prints out some extra scores for calibrating if True.
+    *
+    * @return List of normalized (word, score) pairs that is the mental state distribution.
+    */
+  def processDoc(eval: Evaluation, queriesWithPOS: Array[List[(String, Option[Set[String]])]],
+                 lambdas: Array[Double], docPrunePct: Double = 0.70,
+                 debugMode: Boolean = false): List[(String, Double)] = {
+
+    println("\nDOC NEIGHBORHOOD (Prune = " + docPrunePct + ")\n")
+    val docDataDir = "/Volumes/MyPassport/data/vlsa/neighborhood/" + activity + "/highlights/doc"
+    val index = "/Volumes/MyPassport/data/text/indexes/Gigaword-stemmed"
+    initDocNeighborhood(index, dataDir = Option(docDataDir))
+    val docResults = backOffLinearInterpolation(queriesWithPOS, lambdas, ModelTypes.Document)
+    clearDocNeighborhood()
+
+    if (debugMode) {
+      println("\nDoc results:")
+      println(docResults.mkString(", "))
+      println(docResults.sortWith(_._2 > _._2).mkString(", "))
+      NeighborhoodExperiment.estimateCWSAF1Params(docResults, eval)
+    }
+
+    Stats.normalizeScores(pruneByProbMass(docResults, docPrunePct))
+  }
+
+
+  /** Process del-doc neighborhood (sentence-collocation model + deleted interpolation).
+    *
+    * Lambda parameters for search tuples (trained on the pilot videos).
+    *
+    *    AA (chase): Array(0.0029585798816568047, 0.378698224852071, 0.6183431952662722)
+    *
+    *    AA (hug): Array(0.0, 0.3916083916083916, 0.6083916083916084)
+    *
+    * @param eval Evaluation object.
+    * @param queriesWithPOS Query tuples with POS.
+    * @param lambdas Interpolation parameters.
+    * @param delDocPrunePct Prune parameter for the del-doc neighborhood.
+    * @param debugMode Prints out some extra scores for calibrating if True.
+    *
+    * @return List of normalized (word, score) pairs that is the mental state distribution.
+    */
+  def processDelDoc(eval: Evaluation, queriesWithPOS: Array[List[(String, Option[Set[String]])]],
+                    lambdas: Array[Double], delDocPrunePct: Double = 0.85,
+                    debugMode: Boolean = false): List[(String, Double)] = {
+
+    println("\nDEL NEIGHBORHOOD (Prune = " + delDocPrunePct + ")\n")
+    val docIndex = "/Volumes/MyPassport/data/text/indexes/Gigaword-stemmed"
+    val frequencyDataDir = "/Volumes/MyPassport/data/vlsa/neighborhood/" + activity + "/frequency/doc"
+    val highlightsDataDir = "/Volumes/MyPassport/data/vlsa/neighborhood/" + activity + "/highlights/doc"
+    initDelDocNeighborhood(docIndex, frequencyDataDir, highlightsDataDir)
+    val delDocResults = deletedInterpolation(queriesWithPOS, lambdas, ModelTypes.Document)
+    clearDelDocNeighborhood()
+
+    if (debugMode) {
+      println("\nDel Doc results:")
+      println(delDocResults.mkString(", "))
+      println(delDocResults.sortWith(_._2 > _._2).mkString(", "))
+      NeighborhoodExperiment.estimateCWSAF1Params(delDocResults, eval)
+    }
+
+    Stats.normalizeScores(pruneByProbMass(delDocResults, delDocPrunePct))
+  }
+
+
+  /** Process del-coref neighborhood (coref model + deleted interpolation).
+    *
+    * Lambda parameters for search tuples (trained on the pilot videos).
+    *
+    *    AA (chase-coref): Array(0.0, 0.08650236657417985, 0.9134976334258201)
+    *    AA (chase-win-0): Array(0.0024449877750611247, 0.3643031784841076, 0.6332518337408313)
+    *    AA (chase-win-1): Array(0.0, 0.32673267326732675, 0.6732673267326733)
+    *    AA (chase-win-2): Array(0.0, 0.2620987062769526, 0.7379012937230475)
+    *    AA (chase-win-3): Array(0.0, 0.2484516779490134, 0.7515483220509867)
+    *
+    *    AA (hug-coref): Array(0.0030309833857207003, 0.05814997754827122, 0.938819039066008)
+    *
+    * @param eval Evaluation object.
+    * @param queriesWithPOS Query tuples with POS.
+    * @param lambdas Interpolation parameters.
+    * @param delCorefPrunePct Prune parameter for the del-coref neighborhood.
+    * @param debugMode Prints out some extra scores for calibrating if True.
+    *
+    * @return List of normalized (word, score) pairs that is the mental state distribution.
+    */
+  def processDelCoref(eval: Evaluation, queriesWithPOS: Array[List[(String, Option[Set[String]])]],
+                      lambdas: Array[Double], delCorefPrunePct: Double = 0.65,
+                      debugMode: Boolean = false): List[(String, Double)] = {
+
+    println("\nDEL COREF NEIGHBORHOOD (Prune = " + delCorefPrunePct + ")\n")
+    val docIndex = "/Volumes/MyPassport/data/text/indexes/Gigaword-stemmed"
+    val frequencyDataDir = "/Volumes/MyPassport/data/vlsa/neighborhood/" + activity + "/frequency/nlp-coref"
+    val highlightsDataDir = "/Volumes/MyPassport/data/vlsa/neighborhood/" + activity + "/highlights/doc"
+    val nlpFile = "/Volumes/MyPassport/data/vlsa/neighborhood/" + activity + "/highlights/nlp/coref.txt"
+    initDelCorefNeighborhood(docIndex, frequencyDataDir, highlightsDataDir, nlpFile)
+    val delCorefResults = deletedInterpolation(queriesWithPOS, lambdas, ModelTypes.Coref)
+    clearDelCorefNeighborhood()
+
+    if (debugMode) {
+      println("\nDel Coref results:")
+      println(delCorefResults.mkString(", "))
+      println(delCorefResults.sortWith(_._2 > _._2).mkString(", "))
+      NeighborhoodExperiment.estimateCWSAF1Params(delCorefResults, eval)
+    }
+
+    Stats.normalizeScores(pruneByProbMass(delCorefResults, delCorefPrunePct))
+  }
+
+
+  /** Process del-NLP neighborhood (event-centric model + deleted interpolation).
+    *
+    * Lambda parameters for search tuples (trained on the pilot videos).
+    *
+    *    A (chase-nlp): Array(0.004310344827586207, 0.9956896551724138)
+    *
+    *    AA (chase-nlp): Array(0.0035087719298245615, 0.1523809523809524, 0.844110275689223)
+    *    AA (chase-nlp-swirl): Array(0.00341130604288499,0.1476608187134503,0.8489278752436648)
+    *    AA (chase-nlp-subject): Array(0.015567765567765568, 0.24267399267399267, 0.7417582417582418)
+    *    AA (chase-nlp-object): Array(0.017733990147783252, 0.1960591133004926, 0.7862068965517242)
+    *
+    *    AL (chase-nlp): Array(0.0012987012987012987, 0.09090909090909091, 0.9077922077922078)
+    *
+    *    AAL (chase-nlp): Array(0.003125, 0.125, 0.1921875, 0.6796875)
+    *
+    *    AA (hug-nlp): Array(0.008615188257817485, 0.10561582641991066, 0.8857689853222719)
+    *
+    * @param eval Evaluation object.
+    * @param queriesWithPOS Query tuples with POS.
+    * @param lambdas Interpolation parameters.
+    * @param delNLPPrunePct Prune parameter for the del-NLP neighborhood.
+    * @param debugMode Prints out some extra scores for calibrating if True.
+    *
+    * @return List of normalized (word, score) pairs that is the mental state distribution.
+    */
+  def processDelNLP(eval: Evaluation, queriesWithPOS: Array[List[(String, Option[Set[String]])]],
+                    lambdas: Array[Double], delNLPPrunePct: Double = 0.85,
+                    debugMode: Boolean = false): List[(String, Double)] = {
+
+    println("\nDEL NLP NEIGHBORHOOD (Prune = " + delNLPPrunePct + ")\n")
+    val docIndex = "/Volumes/MyPassport/data/text/indexes/Gigaword-stemmed"
+    val frequencyDataDir = "/Volumes/MyPassport/data/vlsa/neighborhood/" + activity + "/frequency/nlp-aal"
+    val highlightsDataDir = "/Volumes/MyPassport/data/vlsa/neighborhood/" + activity + "/highlights/doc"
+    initDelNLPNeighborhood(docIndex, frequencyDataDir, highlightsDataDir)
+    val delNLPResults = deletedInterpolation(queriesWithPOS, lambdas, ModelTypes.NLP)
+    clearDelNLPNeighborhood()
+
+    if (debugMode) {
+      println("\nDel NLP results:")
+      println(delNLPResults.mkString(", "))
+      println(delNLPResults.sortWith(_._2 > _._2).mkString(", "))
+      NeighborhoodExperiment.estimateCWSAF1Params(delNLPResults, eval)
+    }
+
+    Stats.normalizeScores(pruneByProbMass(delNLPResults, delNLPPrunePct))
+  }
+
 
   /** Process a movie using the word neighborhood model once the detections and mental states
     * have already been loaded.
@@ -613,7 +837,7 @@ class WordNeighborhood(var activity: String, val statesDictionary: String,
     * @param delNLPPrunePct Prune parameter for the deleted interpolation with NLP model.
     * @param debugMode Prints out some extra scores for calibrating if True.
     *
-    * @return List of normalized (word, score) pairs that is the mental states distribution.
+    * @return List of normalized (word, score) pairs that is the mental state distribution.
     */
   def process(eval: Evaluation, vecPrunePct: Option[Double] = Option(0.10), docPrunePct: Option[Double] = Option(0.7),
               delDocPrunePct: Option[Double] = Option(0.85), delCorefPrunePct: Option[Double] = Option(0.65),
@@ -637,22 +861,9 @@ class WordNeighborhood(var activity: String, val statesDictionary: String,
      */
     var vecPruned: List[(String, Double)] = List[(String, Double)]()
     if (vecPrunePct.isDefined) {
-      println("\nVEC NEIGHBORHOOD (Prune = " + vecPrunePct.get + ")\n")
-      val vecFile = "/Volumes/MyPassport/data/text/entity-vectors/Gigaword-story/story-vecs.bin"
       //val lambdas = Array(0.2, 0.5)
       val lambdas = Array(0.25)
-      initVecNeighborhood(vecFile)
-      val vecResults = backOffLinearInterpolation(queriesWithPOS, lambdas, ModelTypes.Vector)
-      clearVecNeighborhood()
-
-      if (debugMode) {
-        println("\nVec results:")
-        println(vecResults.mkString(", "))
-        println(vecResults.sortWith(_._2 > _._2).mkString(", "))
-        NeighborhoodExperiment.estimateCWSAF1Params(vecResults, eval)
-      }
-
-      vecPruned = Stats.normalizeScores(pruneByProbMass(vecResults, vecPrunePct.get))
+      vecPruned = processVec(eval, queriesWithPOS, lambdas, vecPrunePct.get, debugMode)
     }
 
 
@@ -661,23 +872,9 @@ class WordNeighborhood(var activity: String, val statesDictionary: String,
      */
     var docPruned: List[(String, Double)] = List[(String, Double)]()
     if (docPrunePct.isDefined) {
-      println("\nDOC NEIGHBORHOOD (Prune = " + docPrunePct.get + ")\n")
-      val docDataDir = "/Volumes/MyPassport/data/vlsa/neighborhood/" + activity + "/highlights/doc"
-      val index = "/Volumes/MyPassport/data/text/indexes/Gigaword-stemmed"
       //val lambdas = Array(0.2, 0.5)
       val lambdas = Array(0.25)
-      initDocNeighborhood(index, dataDir = Option(docDataDir))
-      val docResults = backOffLinearInterpolation(queriesWithPOS, lambdas, ModelTypes.Document)
-      clearDocNeighborhood()
-
-      if (debugMode) {
-        println("\nDoc results:")
-        println(docResults.mkString(", "))
-        println(docResults.sortWith(_._2 > _._2).mkString(", "))
-        NeighborhoodExperiment.estimateCWSAF1Params(docResults, eval)
-      }
-
-      docPruned = Stats.normalizeScores(pruneByProbMass(docResults, docPrunePct.get))
+      docPruned = processDoc(eval, queriesWithPOS, lambdas, docPrunePct.get, debugMode)
     }
 
 
@@ -692,23 +889,8 @@ class WordNeighborhood(var activity: String, val statesDictionary: String,
      */
     var delDocPruned: List[(String, Double)] = List[(String, Double)]()
     if (delDocPrunePct.isDefined) {
-      println("\nDEL NEIGHBORHOOD (Prune = " + delDocPrunePct.get + ")\n")
       val lambdas = Array(0.0029585798816568047, 0.378698224852071, 0.6183431952662722)
-      val docIndex = "/Volumes/MyPassport/data/text/indexes/Gigaword-stemmed"
-      val frequencyDataDir = "/Volumes/MyPassport/data/vlsa/neighborhood/" + activity + "/frequency/doc"
-      val highlightsDataDir = "/Volumes/MyPassport/data/vlsa/neighborhood/" + activity + "/highlights/doc"
-      initDelDocNeighborhood(docIndex, frequencyDataDir, highlightsDataDir)
-      val delDocResults = deletedInterpolation(queriesWithPOS, lambdas, ModelTypes.Document)
-      clearDelDocNeighborhood()
-
-      if (debugMode) {
-        println("\nDel Doc results:")
-        println(delDocResults.mkString(", "))
-        println(delDocResults.sortWith(_._2 > _._2).mkString(", "))
-        NeighborhoodExperiment.estimateCWSAF1Params(delDocResults, eval)
-      }
-
-      delDocPruned = Stats.normalizeScores(pruneByProbMass(delDocResults, delDocPrunePct.get))
+      delDocPruned = processDelDoc(eval, queriesWithPOS, lambdas, delDocPrunePct.get, debugMode)
     }
 
 
@@ -727,24 +909,8 @@ class WordNeighborhood(var activity: String, val statesDictionary: String,
      */
     var delCorefPruned: List[(String, Double)] = List[(String, Double)]()
     if (delCorefPrunePct.isDefined) {
-      println("\nDEL COREF NEIGHBORHOOD (Prune = " + delCorefPrunePct.get + ")\n")
       val lambdas = Array(0.0, 0.08650236657417985, 0.9134976334258201)  /* Reminder: Update! */
-      val docIndex = "/Volumes/MyPassport/data/text/indexes/Gigaword-stemmed"
-      val frequencyDataDir = "/Volumes/MyPassport/data/vlsa/neighborhood/" + activity + "/frequency/nlp-coref"
-      val highlightsDataDir = "/Volumes/MyPassport/data/vlsa/neighborhood/" + activity + "/highlights/doc"
-      val nlpFile = "/Volumes/MyPassport/data/vlsa/neighborhood/" + activity + "/highlights/nlp/coref.txt"
-      initDelCorefNeighborhood(docIndex, frequencyDataDir, highlightsDataDir, nlpFile)
-      val delCorefResults = deletedInterpolation(queriesWithPOS, lambdas, ModelTypes.Coref)
-      clearDelCorefNeighborhood()
-
-      if (debugMode) {
-        println("\nDel Coref results:")
-        println(delCorefResults.mkString(", "))
-        println(delCorefResults.sortWith(_._2 > _._2).mkString(", "))
-        NeighborhoodExperiment.estimateCWSAF1Params(delCorefResults, eval)
-      }
-
-      delCorefPruned = Stats.normalizeScores(pruneByProbMass(delCorefResults, delCorefPrunePct.get))
+      delCorefPruned = processDelCoref(eval, queriesWithPOS, lambdas, delCorefPrunePct.get, debugMode)
     }
 
 
@@ -753,34 +919,23 @@ class WordNeighborhood(var activity: String, val statesDictionary: String,
      *
      * Lambda parameters for search tuples (trained on the pilot videos).
      *
+     *    A (chase-nlp): Array(0.004310344827586207, 0.9956896551724138)
+     *
      *    AA (chase-nlp): Array(0.0035087719298245615, 0.1523809523809524, 0.844110275689223)
      *    AA (chase-nlp-swirl): Array(0.00341130604288499,0.1476608187134503,0.8489278752436648)
-     *    AA (chase-nlp-subject): Array(0.015567765567765568,0.24267399267399267,0.7417582417582418)
-     *    AA (chase-nlp-object): Array(0.017733990147783252,0.1960591133004926,0.7862068965517242)
+     *    AA (chase-nlp-subject): Array(0.015567765567765568, 0.24267399267399267, 0.7417582417582418)
+     *    AA (chase-nlp-object): Array(0.017733990147783252, 0.1960591133004926, 0.7862068965517242)
      *
-     *    AAL (chase-nlp): Array(0.001876172607879925, 0.12195121951219512, 0.1651031894934334, 0.7110694183864915)
+     *    AL (chase-nlp): Array(0.0012987012987012987, 0.09090909090909091, 0.9077922077922078)
+     *
+     *    AAL (chase-nlp): Array(0.003125, 0.125, 0.1921875, 0.6796875)
      *
      *    AA (hug-nlp): Array(0.008615188257817485, 0.10561582641991066, 0.8857689853222719)
      */
     var delNLPPruned: List[(String, Double)] = List[(String, Double)]()
     if (delNLPPrunePct.isDefined) {
-      println("\nDEL NLP NEIGHBORHOOD (Prune = " + delNLPPrunePct.get + ")\n")
       val lambdas = Array(0.0035087719298245615, 0.1523809523809524, 0.844110275689223)  /* Reminder: Update! */
-      val docIndex = "/Volumes/MyPassport/data/text/indexes/Gigaword-stemmed"
-      val frequencyDataDir = "/Volumes/MyPassport/data/vlsa/neighborhood/" + activity + "/frequency/nlp"
-      val highlightsDataDir = "/Volumes/MyPassport/data/vlsa/neighborhood/" + activity + "/highlights/doc"
-      initDelNLPNeighborhood(docIndex, frequencyDataDir, highlightsDataDir)
-      val delNLPResults = deletedInterpolation(queriesWithPOS, lambdas, ModelTypes.NLP)
-      clearDelNLPNeighborhood()
-
-      if (debugMode) {
-        println("\nDel NLP results:")
-        println(delNLPResults.mkString(", "))
-        println(delNLPResults.sortWith(_._2 > _._2).mkString(", "))
-        NeighborhoodExperiment.estimateCWSAF1Params(delNLPResults, eval)
-      }
-
-      delNLPPruned = Stats.normalizeScores(pruneByProbMass(delNLPResults, delNLPPrunePct.get))
+      delNLPPruned = processDelNLP(eval, queriesWithPOS, lambdas, delNLPPrunePct.get, debugMode)
     }
 
 
@@ -895,11 +1050,28 @@ object RunWordNeighborhood {
 
       if (runBaseline) {
 
-        /** Baseline model */
-        println("\n====\nBaseline for file " + annotationFile + "\n")
-        val baseline = wnm.baseline(eval)
-        F1s.append(eval.F1(baseline.map(_._1).toSet))
-        CWSAF1s.append(eval.CWSAF1(baseline))
+        // Run uniform baseline
+        val unifBaseline = false
+
+        if (unifBaseline) {
+
+          /** Uniform baseline model */
+          println("\n====\nUniform baseline for file " + annotationFile + "\n")
+          val uBaseline = wnm.unifBaseline()
+          F1s.append(eval.F1(uBaseline.map(_._1).toSet))
+          CWSAF1s.append(eval.CWSAF1(uBaseline))
+
+        } else {
+
+          /** Frequency baseline model */
+          println("\n====\nFrequency baseline for file " + annotationFile + "\n")
+          val freqDir = "/Volumes/MyPassport/data/vlsa/neighborhood/" + activity + "/frequency/states"
+          val fBaseline = wnm.freqBaseline(freqDir)
+          //val fBaseline = Stats.normalizeScores(wnm.pruneByProbMass(wnm.freqBaseline(freqDir), 0.2))
+          F1s.append(eval.F1(fBaseline.map(_._1).toSet))
+          CWSAF1s.append(eval.CWSAF1(fBaseline))
+
+        }
 
       } else {
 
@@ -907,8 +1079,8 @@ object RunWordNeighborhood {
         println("\n====\nEvaluation for file " + annotationFile + "\n")
 
         val distribution = wnm.process(eval, debugMode = false,
-          vecPrunePct = Option(.10) /* .10 */ , docPrunePct = None /* .70 */ , delDocPrunePct = None /* .85 */ ,
-          delCorefPrunePct = None /* .65 */ , delNLPPrunePct = Option(.55) /* .85 */)
+          vecPrunePct = None /* .10 */ , docPrunePct = None /* .70 */ , delDocPrunePct = None /* .85 */ ,
+          delCorefPrunePct = None /* .65 */ , delNLPPrunePct = None /* .85 */)
 
         println("\n====\nFinal results:")
         println(distribution.sortWith(_._2 > _._2).mkString(", "))
@@ -948,6 +1120,9 @@ object RunExhaustPrunePercentage {
     val statesDictionary = "/Volumes/MyPassport/data/text/dictionaries/mental-states/states-adjectives.txt"
     val cacheDirectory = "/Volumes/MyPassport/data/vlsa/neighborhood/" + activity + "/distributions"
     val mode = ActorMode.All
+
+    // Run baseline model or not
+    val runBaseline = false
 
     // Keep list of scores (for each prune level)
     val F1s = new ListBuffer[(Double, Double, Double)]()
@@ -991,13 +1166,28 @@ object RunExhaustPrunePercentage {
 
         eval.log = false
 
-        /** Run model */
-        val distribution = wnm.process(eval, debugMode = false,
-          vecPrunePct = None /* .10 */, docPrunePct = None /* .70 */, delDocPrunePct = None /* .85 */,
-          delCorefPrunePct = None /* .70 */, delNLPPrunePct = None /* .85 */)
+        // The resulting distribution
+        var distribution: List[(String, Double)] = null
+
+        if (runBaseline) {
+
+          /** Frequency baseline model */
+          println("\n====\nFrequency baseline for file " + annotationFile + "\n")
+          val freqDir = "/Volumes/MyPassport/data/vlsa/neighborhood/" + activity + "/frequency/states"
+          distribution = Stats.normalizeScores(wnm.pruneByProbMass(wnm.freqBaseline(freqDir), pct))
+
+        } else {
+
+          /** Run model */
+          distribution = wnm.process(eval, debugMode = false,
+            vecPrunePct = None /* .10 */ , docPrunePct = None /* .70 */ , delDocPrunePct = None /* .85 */ ,
+            delCorefPrunePct = None /* .70 */ , delNLPPrunePct = None /* .85 */)
+
+        }
 
         f1s.append(eval.F1(distribution.map(_._1).toSet))
         cwsaf1s.append(eval.CWSAF1(distribution))
+
       })
 
       F1s.append(Evaluation.aveF1s(f1s.toList))

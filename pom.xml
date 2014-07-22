@@ -7,7 +7,7 @@
     <groupId>edu.arizona.sista</groupId>
     <artifactId>vlsa</artifactId>
     <packaging>pom</packaging>
-    <version>1.0.1</version>
+    <version>1.0.2</version>
     <name>Video Latent Scene Attributes System</name>
     <url>https://github.com/trananh/vlsa</url>
 
@@ -170,12 +170,12 @@
         <dependency>
             <groupId>edu.arizona.sista</groupId>
             <artifactId>processors</artifactId>
-            <version>2.0</version>
+            <version>2.1</version>
         </dependency>
         <dependency>
             <groupId>edu.arizona.sista</groupId>
             <artifactId>processors</artifactId>
-            <version>2.0</version>
+            <version>2.1</version>
             <classifier>models</classifier>
         </dependency>
         <!-- Lucene (VLSA depends on v4.2.1) -->

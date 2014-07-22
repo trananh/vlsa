@@ -1,12 +1,13 @@
 package edu.arizona.sista.vlsa.experiments
 
+import java.io.File
+
 import edu.arizona.sista.vlsa.math.{Stats, VectorMath}
 import edu.arizona.sista.vlsa.models.evaluation.Evaluation
-import edu.arizona.sista.vlsa.models.text.ie.neighborhood.{WebNeighborhood, VecNeighborhood, DocNeighborhood}
+import edu.arizona.sista.vlsa.models.text.ie.neighborhood.{Baseline, DocNeighborhood, VecNeighborhood, WebNeighborhood}
 import edu.arizona.sista.vlsa.search.lucene.IndexSearcher
-import edu.arizona.sista.vlsa.search.web.BingSearcher
 import edu.arizona.sista.vlsa.utils.NLPUtils
-import java.io.File
+
 import scala.collection.mutable.ListBuffer
 
 /** Provides methods to run different neighborhood models and estimate hyper-parameters.
@@ -320,6 +321,8 @@ object NeighborhoodExperiment {
         scores = model.getRankedResults(WebNeighborhood.Scoring.Score)
       } case model: VecNeighborhood => {
         scores = model.getRankedResults(VecNeighborhood.Scoring.ExpEuclideanBased)
+      } case model: Baseline => {
+        scores = model.getRankedResults()
       }
     }
     val probs = ListBuffer(scores.map(_._1).zip(VectorMath.normalize(scores.map(_._2))).toSeq: _*)
@@ -336,7 +339,7 @@ object NeighborhoodExperiment {
 
     // Vectors space distributional distance
     eval.loadVectors(vecFile)
-    eval.vecDistributionalDistance(probs.toList)
+    eval.vecDistributionalSimilarity(probs.toList)
     eval.clearVectors()
 
     // Grab top results
@@ -405,8 +408,8 @@ object NeighborhoodExperiment {
     })
     vecModel.clear()
 
-    // Run base-line model experiment
-    val baseModel = new WebNeighborhood(new BingSearcher())
+    // Run uniform baseline model experiment
+    val baseModel = new Baseline()
     baseModel.loadAdjectiveDictionary(new File(statesDictionary), defaultScore = 1.0)
     println("\nEVALUATING BASELINE MODEL\n")
     evalSet.foreach(file => {

@@ -2,10 +2,12 @@ package edu.arizona.sista.vlsa.models.data
 
 import edu.arizona.sista.vlsa.models.data.DetectionsAnnotation.DetectionTypes
 import edu.arizona.sista.vlsa.models.data.DetectionsAnnotation.DetectionTypes.DetectionTypes
+import edu.arizona.sista.vlsa.utils.NLPUtils
+
 import scala.collection.immutable.HashMap
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
-import edu.arizona.sista.vlsa.utils.NLPUtils
+import scala.util.Random
 
 /** A video annotation that stores detection labels, categorized by types.
   *
@@ -53,6 +55,9 @@ class DetectionsAnnotation() {
 /** VideoAnnotation singleton object */
 object DetectionsAnnotation {
 
+  /** Random number generator */
+  private val randomizer = new Random()
+
   /** Different types of detections. */
   object DetectionTypes extends Enumeration {
     type DetectionTypes = Value
@@ -78,9 +83,9 @@ object DetectionsAnnotation {
     detection match {
 
       /** Translate common abbreviations and slangs */
-      case "bike"       => return Array("bicycle")
-      case "motor-bike" => return Array("motorcycle")
-      case "tv"         => return Array("television")
+      case "bike"         => return Array("bicycle")
+      case "motor-bike"   => return Array("motorcycle")
+      case "tv"           => return Array("television")
 
       /** Use common terms for parent-child relationship */
       case "parent-child" => Array("parent", "father", "mother", "dad", "mom", "child", "son", "daughter")
@@ -88,12 +93,32 @@ object DetectionsAnnotation {
       /** Introduce common synonyms using the most frequent word-sense synset from WordNet 3.1.
         * Note: we only use synonyms that are single words (e.g. no "police officer").
         */
-      case "child"      => return Array("child", "kid", "youngster", "minor", "shaver", "nipper", "tiddler", "tike",
-                                        "tyke", "fry", "nestling")
-      case "policeman"  => return Array("policeman", "officer")
-      case "person"     => return Array("person", "individual", "someone", "somebody", "mortal", "soul")
+      case "child"        => return Array("child", "kid", "youngster", "minor", "shaver", "nipper", "tiddler",
+                                          "tike", "tyke", "fry", "nestling")
+      case "policeman"    => return Array("policeman", "officer")
+      case "person"       => return Array("person", "individual", "someone", "somebody", "mortal", "soul")
 
-      case _            => return Array(detection)
+      case "alley"        => return Array("alley", "alleyway", "backstreet")
+      case "arena"        => return Array("arena", "sphere", "domain", "area", "orbit", "field")
+      case "backyard"     => return Array("backyard")
+      case "beach"        => return Array("beach")
+      case "country"      => return Array("country", "state", "nation", "land", "commonwealth")
+      case "field"        => return Array("field")
+      case "forest"       => return Array("forest", "wood", "woods")
+      case "highway"      => return Array("highway")
+      case "home"         => return Array("home", "place")
+      case "indoor"       => return Array("indoor")
+      case "industrial"   => return Array("industrial")
+      case "office"       => return Array("office")
+      case "outdoor"      => return Array("outdoor", "outside")
+      case "park"         => return Array("park", "parkland")
+      case "parking-lot"  => return Array("parking-lot", "park")
+      case "playground"   => return Array("playground")
+      case "store"        => return Array("store", "shop")
+      case "street"       => return Array("street")
+      case "suburb"       => return Array("suburb", "suburbia")
+
+      case _              => return Array(detection)
     }
   }
 
@@ -175,11 +200,30 @@ object DetectionsAnnotation {
 
   )
 
+  /** Set of all possible detectors. */
+  val DETECTORS_SET: Set[String] = detectionsTypes.keySet
+
+
+
+  /** Return the accuracy percentage of the given detection. */
+  def getAccuracyPercentage(detection: String): Double = {
+    detectionsAccuracies.getOrElse(detection, 0.0)
+  }
+
+  /** Return true if the detection triggered, based on accuracy percentage.
+    *
+    * In other words, add artificial noise to a detection based on known accuracy.
+    */
+  def isDetected(detection: String): Boolean = {
+    val i = randomizer.nextInt(100).toDouble
+    (i < getAccuracyPercentage(detection) * 100)
+  }
+
   /** Map of detections to their empirical accuracies */
   private val detectionsAccuracies = HashMap[String, Double] (
     /* Actions */
     "carrying"      -> 0.0,     /** UNKNOWN */
-    "chase"         -> 0.0,     /** UNKNOWN */
+    "chase"         -> 0.99690, /** UA Mind's Eye Y1 evaluation */
     "fall"          -> 0.0,     /** UNKNOWN */
     "jogging"       -> 1.0,     /** Sadanand2012 - KTH Actions */
     "jumping"       -> 0.8,     /** Kerr2011 - ww3d */
@@ -195,48 +239,48 @@ object DetectionsAnnotation {
     "waving"        -> 1.0,     /** Sadanand2012 - KTH Actions */
 
     /* Actor types */
-    "child"         -> 0.0,     /** UNKNOWN */
-    "object"        -> 0.0,     /** UNKNOWN */
-    "person"        -> 0.0,     /** UNKNOWN */
-    "policeman"     -> 0.0,     /** UNKNOWN */
+    "child"         -> 0.461,   /** VOC2012 "person" detection precision (UOC_OXFORD_DPM_MKL) */
+    "object"        -> 0.4113,  /** VOC2012 average (non-person) detection precision (UVA_HYBRID_CODING_APE) */
+    "person"        -> 0.461,   /** VOC2012 "person" detection precision (UOC_OXFORD_DPM_MKL) */
+    "policeman"     -> 0.4086,  /** VOC2012 average detection precision (UVA_HYBRID_CODING_APE) */
 
     /* Object types */
     "bag"           -> 0.0,     /** UNKNOWN */
     "ball"          -> 0.0,     /** UNKNOWN */
     "bat"           -> 0.0,     /** UNKNOWN */
-    "bike"          -> 0.0,     /** UNKNOWN */
-    "boat"          -> 0.0,     /** UNKNOWN */
-    "bus"           -> 0.0,     /** UNKNOWN */
-    "car"           -> 0.0,     /** UNKNOWN */
-    "chair"         -> 0.0,     /** UNKNOWN */
+    "bike"          -> 0.545,   /** VOC2012 "bicycle" detection precision (UOC_OXFORD_DPM_MKL) */
+    "boat"          -> 0.248,   /** VOC2012 "boat" detection precision (UVA_HYBRID_CODING_APE) */
+    "bus"           -> 0.571,   /** VOC2012 "bus" detection precision (UVA_HYBRID_CODING_APE) */
+    "car"           -> 0.493,   /** VOC2012 "car" detection precision (UOC_OXFORD_DPM_MKL) */
+    "chair"         -> 0.195,   /** VOC2012 "chair" detection precision (MISSOURI_HOGLBP_MDPM_CONTEXT) */
     "gun"           -> 0.0,     /** UNKNOWN */
-    "motor-bike"    -> 0.0,     /** UNKNOWN */
+    "motor-bike"    -> 0.594,   /** VOC2012 "motor-bike" detection precision (UVA_HYBRID_CODING_APE) */
     "table"         -> 0.0,     /** UNKNOWN */
-    "tv"            -> 0.0,     /** UNKNOWN */
-    "train"         -> 0.0,     /** UNKNOWN */
+    "tv"            -> 0.495,   /** VOC2012 "tv/monitor" detection precision (UVA_HYBRID_CODING_APE) */
+    "train"         -> 0.511,   /** VOC2012 "train" detection precision (UVA_HYBRID_CODING_APE) */
     "tree"          -> 0.0,     /** UNKNOWN */
     "truck"         -> 0.0,     /** UNKNOWN */
 
     /* Location types */
-    "alley"         -> 0.0,     /** UNKNOWN */
-    "arena"         -> 0.0,     /** UNKNOWN */
-    "backyard"      -> 0.0,     /** UNKNOWN */
-    "beach"         -> 0.0,     /** UNKNOWN */
-    "country"       -> 0.0,     /** UNKNOWN */
-    "field"         -> 0.0,     /** UNKNOWN */
-    "forest"        -> 0.0,     /** UNKNOWN */
-    "highway"       -> 0.0,     /** UNKNOWN */
-    "home"          -> 0.0,     /** UNKNOWN */
-    "indoor"        -> 0.0,     /** UNKNOWN */
-    "industrial"    -> 0.0,     /** UNKNOWN */
-    "office"        -> 0.0,     /** UNKNOWN */
-    "outdoor"       -> 0.0,     /** UNKNOWN */
-    "park"          -> 0.0,     /** UNKNOWN */
-    "parking-lot"   -> 0.0,     /** UNKNOWN */
-    "playground"    -> 0.0,     /** UNKNOWN */
-    "store"         -> 0.0,     /** UNKNOWN */
-    "street"        -> 0.0,     /** UNKNOWN */
-    "suburb"        -> 0.0,     /** UNKNOWN */
+    "alley"         -> 0.231,   /** "alley" precision (Xiao2010) */
+    "arena"         -> 0.345,   /** average precision (Xiao2010) */
+    "backyard"      -> 0.345,   /** average precision (Xiao2010) */
+    "beach"         -> 0.184,   /** "beach" precision (Xiao2010) */
+    "country"       -> 0.705,   /** "open-country" accuracy (Lazebnik2006) */
+    "field"         -> 0.345,   /** average precision (Xiao2010) */
+    "forest"        -> 0.947,   /** "forest" accuracy (Lazebnik2006) */
+    "highway"       -> 0.866,   /** "highway" accuracy (Lazebnik2006) */
+    "home"          -> 0.629,   /** average indoor performance Gist (Quattoni2009) */
+    "indoor"        -> 0.629,   /** average indoor performance Gist (Quattoni2009) */
+    "industrial"    -> 0.654,   /** "industrial" accuracy (Lazebnik2006) */
+    "office"        -> 0.927,   /** "office" accuracy (Lazebnik2006) */
+    "outdoor"       -> 0.345,   /** average precision (Xiao2010) */
+    "park"          -> 0.48,    /** "park" precision (Xiao2010) */
+    "parking-lot"   -> 0.345,   /** average precision (Xiao2010) */
+    "playground"    -> 0.467,   /** "playground" precision (Xiao2010) */
+    "store"         -> 0.762,   /** "store" accuracy (Lazebnik2006) */
+    "street"        -> 0.805,   /** "street" accuracy (Lazebnik2006) */
+    "suburb"        -> 0.994,   /** "suburb" accuracy (Lazebnik2006) */
 
     /* Relationship types */
     "strangers"     -> 0.0,     /** UNKNOWN */

@@ -1,8 +1,7 @@
 package edu.arizona.sista.vlsa.utils
 
-import java.io.{FileInputStream, File}
+import java.io.{File, FileInputStream}
 import java.util.Properties
-import scala.Option
 
 /** Place to hold all global (i.e., system level) constants and properties.
   * This class will try to look for a properties file named "config.properties" and load
@@ -21,7 +20,7 @@ object Constants {
 
 
   /** VLSA project root */
-  val VLSA_ROOT = System.getProperty("user.dir") + "/research/src/main/scala/edu/arizona/sista/vlsa"
+  val VLSA_ROOT = System.getProperty("user.dir")
 
 
   /** Load configuration properties if file exists */
