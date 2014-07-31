@@ -80,12 +80,18 @@
 <h3>
 <a name="using-intellij-idea" class="anchor" href="#using-intellij-idea"><span class="octicon octicon-link"></span></a>Using IntelliJ IDEA</h3>
 
-<p><strong>Install IntelliJ IDEA</strong></p>
+<h4>
+<a name="install-intellij-idea" class="anchor" href="#install-intellij-idea"><span class="octicon octicon-link"></span></a>Install IntelliJ IDEA</h4>
 
-<ul>
-<li>If you have not done so already, download IntelliJ IDEA Community Edition from <a href="http://www.jetbrains.com/idea/free_java_ide.html">here</a>.</li>
-<li>Install the Scala plugin. See this <a href="http://confluence.jetbrains.com/display/SCA/Getting+Started+with+IntelliJ+IDEA+Scala+Plugin">page</a> for installation details. </li>
-</ul><p><strong>Import vlsa</strong></p>
+<p>If you have not done so already, download IntelliJ IDEA Community Edition from
+<a href="http://www.jetbrains.com/idea/free_java_ide.html">here</a>.</p>
+
+<p>Install the Scala plugin. See this
+<a href="http://confluence.jetbrains.com/display/SCA/Getting+Started+with+IntelliJ+IDEA+Scala+Plugin">page</a>
+for installation details </p>
+
+<h4>
+<a name="import-vlsa" class="anchor" href="#import-vlsa"><span class="octicon octicon-link"></span></a>Import vlsa</h4>
 
 <p>When you are done installing IntelliJ, you are ready to import vlsa. Go to File/Import Project. In the file window that opens select vlsa/pom.xml. In the next window, make sure that only the following options are checked:</p>
 
@@ -109,14 +115,15 @@ Automatically download: Sources (YES) Documentation (YES)
 <ul>
 <li>First, increase the memory size available to IDEA. For this, edit the idea.vmoptions file. See this page for details: <a href="http://stackoverflow.com/questions/2435569/how-to-give-more-memory-to-intellij-idea-9-11">http://stackoverflow.com/questions/2435569/how-to-give-more-memory-to-intellij-idea-9-11</a>.</li>
 <li>[optional] Second, edit the code style for both Java and Scala programs to use an indentation of two spaces. For this, go to Preferences (or Settings in Windows), then Code Style/General. Set Tab Size, Indent, and Continuation Indent to 2. Uncheck Use Tab Character. Do the same in the Scala and Java tabs under Code Style. </li>
-</ul><p><strong>Compile and test</strong></p>
+</ul><h4>
+<a name="compile-and-test" class="anchor" href="#compile-and-test"><span class="octicon octicon-link"></span></a>Compile and test</h4>
 
 <p>After this is done, compile the project. It should compile without errors (maybe a few warnings). If you see this warning:</p>
 
 <pre><code>Unregistered Git root detected
 </code></pre>
 
-<p>click the popup to go to the configuration window and accept the proposed configuration with the new Git root (click Ok). </p>
+<p>Click the popup to go to the configuration window and accept the proposed configuration with the new Git root (click Ok). </p>
 
 <p>Once the project has compiled run a test program to double check. For example this:</p>
 
